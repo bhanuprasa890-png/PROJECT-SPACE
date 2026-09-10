@@ -1,6 +1,7 @@
 import { AlertTriangle, BellRing, Clock, Radio, ShieldAlert, Siren } from 'lucide-react';
 import type { AiAlert } from '@shared/types';
 import { Badge } from '../ui/Badge';
+import { EmptyState } from '../ui/Skeleton';
 import { Button } from '../ui/Button';
 import { cn, formatClock } from '../../lib/utils';
 
@@ -50,11 +51,13 @@ export function AiAlertFeed({
 }) {
   if (!alerts.length) {
     return (
-      <div className={cn('px-5 py-8 text-center', className)}>
-        <p className="text-sm text-mist-300">No alerts in the forecast window</p>
-        <p className="mt-1 text-xs text-mist-500">
-          The engine raises a card when a route is predicted to pass the crowding threshold.
-        </p>
+      <div className={cn('px-5 py-4', className)}>
+        <EmptyState
+          compact
+          title="No alerts in the forecast window"
+          description="The engine raises a card when a route is predicted to pass the crowding threshold — right now every corridor is inside its tolerance."
+          icon={<BellRing className="size-5" />}
+        />
       </div>
     );
   }
@@ -74,7 +77,10 @@ export function AiAlertFeed({
                 : 'text-crowd-low';
 
         return (
-          <li key={alert.id} className="space-y-2 px-4 py-3.5">
+          <li
+            key={alert.id}
+            className="space-y-2 px-4 py-3.5 transition-colors hover:bg-white/[0.02]"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-2.5">
                 <span
@@ -86,7 +92,7 @@ export function AiAlertFeed({
                     style.tone === 'info' && 'border-sky-400/35 bg-sky-400/12 text-sky-300',
                   )}
                 >
-                  <Icon className="size-3.5" />
+                  <Icon className="size-3.5" aria-hidden />
                 </span>
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-1.5 text-2xs text-mist-400">

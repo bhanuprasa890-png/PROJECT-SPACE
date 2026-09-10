@@ -2,6 +2,7 @@ import { ArrowRightLeft, BusFront, CalendarClock, Gauge, Wrench } from 'lucide-r
 import type { AiRecommendation } from '@shared/types';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/Skeleton';
 import { cn } from '../../lib/utils';
 
 /**
@@ -39,9 +40,14 @@ export function AiRecommendations({
 }) {
   if (!recommendations.length) {
     return (
-      <p className={cn('px-5 py-6 text-sm text-mist-400', className)}>
-        No interventions required — the network is inside its targets.
-      </p>
+      <div className={cn('px-1 py-2', className)}>
+        <EmptyState
+          compact
+          title="No interventions queued"
+          description="The engine proposes a play only when a route is forecast to pass the crowding threshold."
+          icon={<BusFront className="size-5" />}
+        />
+      </div>
     );
   }
 
