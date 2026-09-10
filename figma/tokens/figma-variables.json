@@ -1,0 +1,525 @@
+{
+  "$comment": "Import into Figma: select the canvas → right-click → Variables → the \"...\" menu → Import from JSON. Two modes (Dark, Light) are created for colour tokens.",
+  "Mise": {
+    "modes": {
+      "Dark": {
+        "color/bg/base": "#100E0C",
+        "color/bg/raise": "#171310",
+        "color/bg/raise-2": "#1F1A16",
+        "color/bg/sunken": "#0A0908",
+        "color/bg/brand-wash": "#2A1B12",
+        "color/border/hairline": "#2C2521",
+        "color/border/strong": "#3E342D",
+        "color/border/focus": "#FF8A3D",
+        "color/text/hi": "#FFF8F1",
+        "color/text/mid": "#C9B8AC",
+        "color/text/low": "#8D7C71",
+        "color/text/inverted": "#1A120C",
+        "color/text/on-accent": "#1A120C",
+        "color/accent/saffron": "#FF8A3D",
+        "color/accent/saffron-soft": "#FFD28A",
+        "color/accent/herb": "#7ED9A6",
+        "color/accent/chilli": "#FF4D5E",
+        "color/accent/tamarind": "#C9A2FF",
+        "color/accent/steam": "#7CC5F7",
+        "color/ink/accent": "#FF8A3D",
+        "color/ink/danger": "#FF7180",
+        "color/ink/ok": "#8FE3B4",
+        "color/google/blue": "#4285F4",
+        "color/google/red": "#EA4335",
+        "color/google/yellow": "#FBBC05",
+        "color/google/green": "#34A853",
+        "color/google/sheet": "#FFFFFF",
+        "color/google/sheet-text": "#202124",
+        "color/google/sheet-muted": "#5F6368",
+        "color/google/sheet-line": "#DADCE0",
+        "font/family/display": "Sora",
+        "font/family/body": "Inter",
+        "font/family/mono": "JetBrains Mono",
+        "font/size/xs": 12,
+        "font/size/sm": 13,
+        "font/size/body": 15,
+        "font/size/md": 17,
+        "font/size/lg": 21,
+        "font/size/xl": 27,
+        "font/size/2xl": 36,
+        "font/size/3xl": 52,
+        "font/weight/regular": 400,
+        "font/weight/medium": 500,
+        "font/weight/semibold": 600,
+        "font/weight/bold": 700,
+        "font/line/tight": 1.08,
+        "font/line/snug": 1.25,
+        "font/line/normal": 1.55,
+        "font/line/loose": 1.75,
+        "font/tracking/display": -1.2,
+        "font/tracking/eyebrow": 1.4,
+        "size/space/1": 4,
+        "size/space/2": 8,
+        "size/space/3": 12,
+        "size/space/4": 16,
+        "size/space/5": 24,
+        "size/space/6": 32,
+        "size/space/7": 48,
+        "size/space/8": 72,
+        "size/radius/sm": 8,
+        "size/radius/md": 14,
+        "size/radius/lg": 22,
+        "size/radius/pill": 999,
+        "size/border/hair": 1,
+        "size/border/thick": 2,
+        "size/control/height": 48,
+        "size/control/height-sm": 38,
+        "size/control/icon": 20,
+        "size/control/tap-target": 44,
+        "effect/shadow/card": "{\"color\":\"#00000066\",\"offsetX\":\"0px\",\"offsetY\":\"18px\",\"blur\":\"40px\"}",
+        "effect/shadow/lift": "{\"color\":\"#00000099\",\"offsetX\":\"0px\",\"offsetY\":\"28px\",\"blur\":\"70px\"}",
+        "effect/shadow/glow": "{\"color\":\"#FF8A3D59\",\"offsetX\":\"0px\",\"offsetY\":\"0px\",\"blur\":\"34px\"}",
+        "effect/blur/glass": 14,
+        "motion/duration/instant": 120,
+        "motion/duration/fast": 220,
+        "motion/duration/base": 380,
+        "motion/duration/slow": 640,
+        "motion/easing/out": "[0.16,0.84,0.24,1]",
+        "motion/easing/in-out": "[0.62,0,0.28,1]",
+        "motion/easing/springy": "[0.34,1.56,0.64,1]",
+        "motion/parallax/card-tilt": 9,
+        "motion/parallax/card-lift": 18
+      },
+      "Light": {
+        "color/bg/base": "#FFFAF4",
+        "color/bg/raise": "#FFFFFF",
+        "color/bg/raise-2": "#F6EFE6",
+        "color/bg/sunken": "#EFE7DC",
+        "color/bg/brand-wash": "#FFF0E2",
+        "color/border/hairline": "#EADFD2",
+        "color/border/strong": "#D6C6B3",
+        "color/border/focus": "#C4571A",
+        "color/text/hi": "#1A120C",
+        "color/text/mid": "#5C4A3C",
+        "color/text/low": "#8A7768",
+        "color/text/inverted": "#FFFFFF",
+        "color/text/on-accent": "#1A120C",
+        "color/accent/saffron": "#E2600F",
+        "color/accent/saffron-soft": "#F2B44C",
+        "color/accent/herb": "#2E9363",
+        "color/accent/chilli": "#D42A3C",
+        "color/accent/tamarind": "#7A4FD1",
+        "color/accent/steam": "#1E7FD1",
+        "color/ink/accent": "#9A3F06",
+        "color/ink/danger": "#B01122",
+        "color/ink/ok": "#1B6B45",
+        "color/google/blue": "#4285F4",
+        "color/google/red": "#EA4335",
+        "color/google/yellow": "#FBBC05",
+        "color/google/green": "#34A853",
+        "color/google/sheet": "#FFFFFF",
+        "color/google/sheet-text": "#202124",
+        "color/google/sheet-muted": "#5F6368",
+        "color/google/sheet-line": "#DADCE0",
+        "font/family/display": "Sora",
+        "font/family/body": "Inter",
+        "font/family/mono": "JetBrains Mono",
+        "font/size/xs": 12,
+        "font/size/sm": 13,
+        "font/size/body": 15,
+        "font/size/md": 17,
+        "font/size/lg": 21,
+        "font/size/xl": 27,
+        "font/size/2xl": 36,
+        "font/size/3xl": 52,
+        "font/weight/regular": 400,
+        "font/weight/medium": 500,
+        "font/weight/semibold": 600,
+        "font/weight/bold": 700,
+        "font/line/tight": 1.08,
+        "font/line/snug": 1.25,
+        "font/line/normal": 1.55,
+        "font/line/loose": 1.75,
+        "font/tracking/display": -1.2,
+        "font/tracking/eyebrow": 1.4,
+        "size/space/1": 4,
+        "size/space/2": 8,
+        "size/space/3": 12,
+        "size/space/4": 16,
+        "size/space/5": 24,
+        "size/space/6": 32,
+        "size/space/7": 48,
+        "size/space/8": 72,
+        "size/radius/sm": 8,
+        "size/radius/md": 14,
+        "size/radius/lg": 22,
+        "size/radius/pill": 999,
+        "size/border/hair": 1,
+        "size/border/thick": 2,
+        "size/control/height": 48,
+        "size/control/height-sm": 38,
+        "size/control/icon": 20,
+        "size/control/tap-target": 44,
+        "effect/shadow/card": "{\"color\":\"#00000066\",\"offsetX\":\"0px\",\"offsetY\":\"18px\",\"blur\":\"40px\"}",
+        "effect/shadow/lift": "{\"color\":\"#00000099\",\"offsetX\":\"0px\",\"offsetY\":\"28px\",\"blur\":\"70px\"}",
+        "effect/shadow/glow": "{\"color\":\"#FF8A3D59\",\"offsetX\":\"0px\",\"offsetY\":\"0px\",\"blur\":\"34px\"}",
+        "effect/blur/glass": 14,
+        "motion/duration/instant": 120,
+        "motion/duration/fast": 220,
+        "motion/duration/base": 380,
+        "motion/duration/slow": 640,
+        "motion/easing/out": "[0.16,0.84,0.24,1]",
+        "motion/easing/in-out": "[0.62,0,0.28,1]",
+        "motion/easing/springy": "[0.34,1.56,0.64,1]",
+        "motion/parallax/card-tilt": 9,
+        "motion/parallax/card-lift": 18
+      }
+    },
+    "variables": {
+      "color/bg/base": {
+        "type": "COLOR",
+        "value": "#100E0C",
+        "description": "Page background"
+      },
+      "color/bg/raise": {
+        "type": "COLOR",
+        "value": "#171310",
+        "description": "Cards, sheets"
+      },
+      "color/bg/raise-2": {
+        "type": "COLOR",
+        "value": "#1F1A16",
+        "description": "Nested surfaces, inputs"
+      },
+      "color/bg/sunken": {
+        "type": "COLOR",
+        "value": "#0A0908"
+      },
+      "color/bg/brand-wash": {
+        "type": "COLOR",
+        "value": "#2A1B12",
+        "description": "Tinted panels (login accent, active chip)"
+      },
+      "color/border/hairline": {
+        "type": "COLOR",
+        "value": "#2C2521"
+      },
+      "color/border/strong": {
+        "type": "COLOR",
+        "value": "#3E342D"
+      },
+      "color/border/focus": {
+        "type": "COLOR",
+        "value": "#FF8A3D",
+        "description": "Focus ring — 3px offset style"
+      },
+      "color/text/hi": {
+        "type": "COLOR",
+        "value": "#FFF8F1"
+      },
+      "color/text/mid": {
+        "type": "COLOR",
+        "value": "#C9B8AC"
+      },
+      "color/text/low": {
+        "type": "COLOR",
+        "value": "#8D7C71"
+      },
+      "color/text/inverted": {
+        "type": "COLOR",
+        "value": "#1A120C",
+        "description": "Text on inverted surfaces (badges, chips)"
+      },
+      "color/text/on-accent": {
+        "type": "COLOR",
+        "value": "#1A120C",
+        "description": "Label on the saffron fill — dark in BOTH modes so it stays AA"
+      },
+      "color/accent/saffron": {
+        "type": "COLOR",
+        "value": "#FF8A3D",
+        "description": "Primary action"
+      },
+      "color/accent/saffron-soft": {
+        "type": "COLOR",
+        "value": "#FFD28A"
+      },
+      "color/accent/herb": {
+        "type": "COLOR",
+        "value": "#7ED9A6",
+        "description": "Success, ready state"
+      },
+      "color/accent/chilli": {
+        "type": "COLOR",
+        "value": "#FF4D5E",
+        "description": "Error, heat"
+      },
+      "color/accent/tamarind": {
+        "type": "COLOR",
+        "value": "#C9A2FF",
+        "description": "Ferment / make-ahead copilot"
+      },
+      "color/accent/steam": {
+        "type": "COLOR",
+        "value": "#7CC5F7",
+        "description": "Info, timer"
+      },
+      "color/ink/accent": {
+        "type": "COLOR",
+        "value": "#FF8A3D",
+        "description": "Accent used AS TEXT on a surface (AA-safe in both modes)"
+      },
+      "color/ink/danger": {
+        "type": "COLOR",
+        "value": "#FF7180",
+        "description": "Error text on a surface"
+      },
+      "color/ink/ok": {
+        "type": "COLOR",
+        "value": "#8FE3B4",
+        "description": "Success text on a surface"
+      },
+      "color/google/blue": {
+        "type": "COLOR",
+        "value": "#4285F4"
+      },
+      "color/google/red": {
+        "type": "COLOR",
+        "value": "#EA4335"
+      },
+      "color/google/yellow": {
+        "type": "COLOR",
+        "value": "#FBBC05"
+      },
+      "color/google/green": {
+        "type": "COLOR",
+        "value": "#34A853"
+      },
+      "color/google/sheet": {
+        "type": "COLOR",
+        "value": "#FFFFFF"
+      },
+      "color/google/sheet-text": {
+        "type": "COLOR",
+        "value": "#202124"
+      },
+      "color/google/sheet-muted": {
+        "type": "COLOR",
+        "value": "#5F6368"
+      },
+      "color/google/sheet-line": {
+        "type": "COLOR",
+        "value": "#DADCE0"
+      },
+      "font/family/display": {
+        "type": "STRING",
+        "value": "Sora"
+      },
+      "font/family/body": {
+        "type": "STRING",
+        "value": "Inter"
+      },
+      "font/family/mono": {
+        "type": "STRING",
+        "value": "JetBrains Mono"
+      },
+      "font/size/xs": {
+        "type": "FLOAT",
+        "value": 12
+      },
+      "font/size/sm": {
+        "type": "FLOAT",
+        "value": 13
+      },
+      "font/size/body": {
+        "type": "FLOAT",
+        "value": 15
+      },
+      "font/size/md": {
+        "type": "FLOAT",
+        "value": 17
+      },
+      "font/size/lg": {
+        "type": "FLOAT",
+        "value": 21
+      },
+      "font/size/xl": {
+        "type": "FLOAT",
+        "value": 27
+      },
+      "font/size/2xl": {
+        "type": "FLOAT",
+        "value": 36
+      },
+      "font/size/3xl": {
+        "type": "FLOAT",
+        "value": 52
+      },
+      "font/weight/regular": {
+        "type": "FLOAT",
+        "value": 400
+      },
+      "font/weight/medium": {
+        "type": "FLOAT",
+        "value": 500
+      },
+      "font/weight/semibold": {
+        "type": "FLOAT",
+        "value": 600
+      },
+      "font/weight/bold": {
+        "type": "FLOAT",
+        "value": 700
+      },
+      "font/line/tight": {
+        "type": "FLOAT",
+        "value": 1.08
+      },
+      "font/line/snug": {
+        "type": "FLOAT",
+        "value": 1.25
+      },
+      "font/line/normal": {
+        "type": "FLOAT",
+        "value": 1.55
+      },
+      "font/line/loose": {
+        "type": "FLOAT",
+        "value": 1.75
+      },
+      "font/tracking/display": {
+        "type": "FLOAT",
+        "value": -1.2
+      },
+      "font/tracking/eyebrow": {
+        "type": "FLOAT",
+        "value": 1.4
+      },
+      "size/space/1": {
+        "type": "FLOAT",
+        "value": 4
+      },
+      "size/space/2": {
+        "type": "FLOAT",
+        "value": 8
+      },
+      "size/space/3": {
+        "type": "FLOAT",
+        "value": 12
+      },
+      "size/space/4": {
+        "type": "FLOAT",
+        "value": 16
+      },
+      "size/space/5": {
+        "type": "FLOAT",
+        "value": 24
+      },
+      "size/space/6": {
+        "type": "FLOAT",
+        "value": 32
+      },
+      "size/space/7": {
+        "type": "FLOAT",
+        "value": 48
+      },
+      "size/space/8": {
+        "type": "FLOAT",
+        "value": 72
+      },
+      "size/radius/sm": {
+        "type": "FLOAT",
+        "value": 8
+      },
+      "size/radius/md": {
+        "type": "FLOAT",
+        "value": 14
+      },
+      "size/radius/lg": {
+        "type": "FLOAT",
+        "value": 22
+      },
+      "size/radius/pill": {
+        "type": "FLOAT",
+        "value": 999
+      },
+      "size/border/hair": {
+        "type": "FLOAT",
+        "value": 1
+      },
+      "size/border/thick": {
+        "type": "FLOAT",
+        "value": 2
+      },
+      "size/control/height": {
+        "type": "FLOAT",
+        "value": 48
+      },
+      "size/control/height-sm": {
+        "type": "FLOAT",
+        "value": 38
+      },
+      "size/control/icon": {
+        "type": "FLOAT",
+        "value": 20
+      },
+      "size/control/tap-target": {
+        "type": "FLOAT",
+        "value": 44
+      },
+      "effect/shadow/card": {
+        "type": "STRING",
+        "value": "{\"color\":\"#00000066\",\"offsetX\":\"0px\",\"offsetY\":\"18px\",\"blur\":\"40px\"}",
+        "description": "Resting card"
+      },
+      "effect/shadow/lift": {
+        "type": "STRING",
+        "value": "{\"color\":\"#00000099\",\"offsetX\":\"0px\",\"offsetY\":\"28px\",\"blur\":\"70px\"}",
+        "description": "Hover / focus lift"
+      },
+      "effect/shadow/glow": {
+        "type": "STRING",
+        "value": "{\"color\":\"#FF8A3D59\",\"offsetX\":\"0px\",\"offsetY\":\"0px\",\"blur\":\"34px\"}",
+        "description": "Primary action halo"
+      },
+      "effect/blur/glass": {
+        "type": "FLOAT",
+        "value": 14
+      },
+      "motion/duration/instant": {
+        "type": "FLOAT",
+        "value": 120
+      },
+      "motion/duration/fast": {
+        "type": "FLOAT",
+        "value": 220
+      },
+      "motion/duration/base": {
+        "type": "FLOAT",
+        "value": 380
+      },
+      "motion/duration/slow": {
+        "type": "FLOAT",
+        "value": 640
+      },
+      "motion/easing/out": {
+        "type": "STRING",
+        "value": "[0.16,0.84,0.24,1]"
+      },
+      "motion/easing/in-out": {
+        "type": "STRING",
+        "value": "[0.62,0,0.28,1]"
+      },
+      "motion/easing/springy": {
+        "type": "STRING",
+        "value": "[0.34,1.56,0.64,1]"
+      },
+      "motion/parallax/card-tilt": {
+        "type": "FLOAT",
+        "value": 9,
+        "description": "max deg on pointer move"
+      },
+      "motion/parallax/card-lift": {
+        "type": "FLOAT",
+        "value": 18,
+        "description": "translateZ on hover"
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+# dependencies / build output
+node_modules/
+client/dist/
+client/.vite/
+*.tsbuildinfo
+
+# local runtime state: the SQLite DB, WAL sidecars and the dev session secret
+server/.dev/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.local
+.env.*.local
+
+# os / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+npm-debug.log*

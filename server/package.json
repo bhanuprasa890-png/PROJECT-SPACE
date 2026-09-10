@@ -1,0 +1,15 @@
+{
+  "name": "@mise/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/index.mjs",
+    "start": "node --disable-warning=ExperimentalWarning src/index.mjs",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

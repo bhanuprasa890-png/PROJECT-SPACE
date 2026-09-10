@@ -1,0 +1,117 @@
+/* GENERATED FILE — do not edit by hand.
+ * Source: figma/tokens/tokens.json  →  npm run tokens
+ */
+:root {
+  --color-bg-base: #100E0C; /* Page background */
+  --color-bg-raise: #171310; /* Cards, sheets */
+  --color-bg-raise-2: #1F1A16; /* Nested surfaces, inputs */
+  --color-bg-sunken: #0A0908;
+  --color-bg-brand-wash: #2A1B12; /* Tinted panels (login accent, active chip) */
+  --color-border-hairline: #2C2521;
+  --color-border-strong: #3E342D;
+  --color-border-focus: #FF8A3D; /* Focus ring — 3px offset style */
+  --color-text-hi: #FFF8F1;
+  --color-text-mid: #C9B8AC;
+  --color-text-low: #8D7C71;
+  --color-text-inverted: #1A120C; /* Text on inverted surfaces (badges, chips) */
+  --color-text-on-accent: #1A120C; /* Label on the saffron fill — dark in BOTH modes so it stays AA */
+  --color-accent-saffron: #FF8A3D; /* Primary action */
+  --color-accent-saffron-soft: #FFD28A;
+  --color-accent-herb: #7ED9A6; /* Success, ready state */
+  --color-accent-chilli: #FF4D5E; /* Error, heat */
+  --color-accent-tamarind: #C9A2FF; /* Ferment / make-ahead copilot */
+  --color-accent-steam: #7CC5F7; /* Info, timer */
+  --color-ink-accent: #FF8A3D; /* Accent used AS TEXT on a surface (AA-safe in both modes) */
+  --color-ink-danger: #FF7180; /* Error text on a surface */
+  --color-ink-ok: #8FE3B4; /* Success text on a surface */
+  --color-google-blue: #4285F4;
+  --color-google-red: #EA4335;
+  --color-google-yellow: #FBBC05;
+  --color-google-green: #34A853;
+  --color-google-sheet: #FFFFFF;
+  --color-google-sheet-text: #202124;
+  --color-google-sheet-muted: #5F6368;
+  --color-google-sheet-line: #DADCE0;
+  --font-family-display: Sora, 'Trebuchet MS', sans-serif;
+  --font-family-body: Inter, system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-body: 15px;
+  --font-size-md: 17px;
+  --font-size-lg: 21px;
+  --font-size-xl: 27px;
+  --font-size-2xl: 36px;
+  --font-size-3xl: 52px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-line-tight: 1.08;
+  --font-line-snug: 1.25;
+  --font-line-normal: 1.55;
+  --font-line-loose: 1.75;
+  --font-tracking-display: -1.2px;
+  --font-tracking-eyebrow: 1.4px;
+  --size-space-1: 4px;
+  --size-space-2: 8px;
+  --size-space-3: 12px;
+  --size-space-4: 16px;
+  --size-space-5: 24px;
+  --size-space-6: 32px;
+  --size-space-7: 48px;
+  --size-space-8: 72px;
+  --size-radius-sm: 8px;
+  --size-radius-md: 14px;
+  --size-radius-lg: 22px;
+  --size-radius-pill: 999px;
+  --size-border-hair: 1px;
+  --size-border-thick: 2px;
+  --size-control-height: 48px;
+  --size-control-height-sm: 38px;
+  --size-control-icon: 20px;
+  --size-control-tap-target: 44px;
+  --effect-shadow-card: 0px 18px 40px 0px #00000066; /* Resting card */
+  --effect-shadow-lift: 0px 28px 70px 0px #00000099; /* Hover / focus lift */
+  --effect-shadow-glow: 0px 0px 34px 0px #FF8A3D59; /* Primary action halo */
+  --effect-blur-glass: 14px;
+  --motion-duration-instant: 120ms;
+  --motion-duration-fast: 220ms;
+  --motion-duration-base: 380ms;
+  --motion-duration-slow: 640ms;
+  --motion-easing-out: cubic-bezier(0.16, 0.84, 0.24, 1);
+  --motion-easing-in-out: cubic-bezier(0.62, 0, 0.28, 1);
+  --motion-easing-springy: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-parallax-card-tilt: 9; /* max deg on pointer move */
+  --motion-parallax-card-lift: 18px; /* translateZ on hover */
+}
+
+/* Paired hex pairs used by recipe card gradients (kept in sync with the recipe data). */
+:root {
+  --card-gradient-angle: 145deg;
+  --hero-depth: 900px;
+}
+
+[data-theme='light'] {
+  --color-bg-base: #FFFAF4;
+  --color-bg-raise: #FFFFFF;
+  --color-bg-raise-2: #F6EFE6;
+  --color-bg-sunken: #EFE7DC;
+  --color-bg-brand-wash: #FFF0E2;
+  --color-border-hairline: #EADFD2;
+  --color-border-strong: #D6C6B3;
+  --color-border-focus: #C4571A;
+  --color-text-hi: #1A120C;
+  --color-text-mid: #5C4A3C;
+  --color-text-low: #8A7768;
+  --color-text-inverted: #FFFFFF;
+  --color-accent-saffron: #E2600F;
+  --color-accent-saffron-soft: #F2B44C;
+  --color-accent-herb: #2E9363;
+  --color-accent-chilli: #D42A3C;
+  --color-accent-tamarind: #7A4FD1;
+  --color-accent-steam: #1E7FD1;
+  --color-ink-accent: #9A3F06;
+  --color-ink-danger: #B01122;
+  --color-ink-ok: #1B6B45;
+}
