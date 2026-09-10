@@ -1,4 +1,6 @@
 import { closeDb, getDb } from '../db/client';
+import { env } from '../config/env';
+import net from 'node:net';
 import type { Queryable } from '../db/client';
 import { runMigrations } from '../db/migrate';
 import { refreshDataset } from '../repositories/dataset.repo';
@@ -317,8 +319,50 @@ async function verify(db: Queryable): Promise<boolean> {
   return true;
 }
 
+
+/**
+ * The embedded Postgres is a single-process engine: a second process that opens
+ * the same data directory either aborts mid-WASM or writes into a state the
+ * running API later overwrites — silently losing the write, which then shows up
+ * as a dashboard whose numbers disagree with the database.
+ *
+ * So before opening it, check whether the API already holds the directory and
+ * explain that instead of letting it fail opaquely. A real Postgres/Supabase
+ * connection (`DATABASE_URL`) is multi-connection safe and skips this check.
+ */
+async function assertDatabaseAvailable(): Promise<void> {
+  if (env.database.url || process.env.DB_ALLOW_CONCURRENT === '1') return;
+
+  const port = env.port;
+  const inUse = await new Promise<boolean>((resolve) => {
+    const socket = net.connect({ host: '127.0.0.1', port }, () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('error', () => resolve(false));
+    socket.setTimeout(500, () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+
+  if (!inUse) return;
+
+  console.error(
+    `\n[db] The embedded Postgres is in use — the API is listening on :${port}.\n\n` +
+      '     It is a single-process engine, so a second connection would either abort\n' +
+      '     or silently lose the write. Either:\n\n' +
+      '       · stop the API first (Ctrl-C on `npm run dev:api`), then run this again, or\n' +
+      '       · point DATABASE_URL at a real Postgres/Supabase instance (multi-connection\n' +
+      '         safe — see §1 of the README).\n\n' +
+      '     Override with DB_ALLOW_CONCURRENT=1 only if you know the API is stopped.\n',
+  );
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
   const command = process.argv[2] ?? 'status';
+  await assertDatabaseAvailable();
   const db = await getDb();
 
   if (command === 'sql') {

@@ -96,7 +96,7 @@ export function RouteDetails() {
     return (
       <ErrorState
         title="Could not rebuild this itinerary"
-        message={(plan.error as Error).message}
+        error={plan.error}
         onRetry={() => void plan.refetch()}
       />
     );

@@ -121,7 +121,7 @@ export function OperatorNetworkMap({
         <div className="grid h-full place-items-center p-4">
           <ErrorState
             title="Map payload unavailable"
-            message={(network.error as Error).message}
+            error={network.error}
             onRetry={() => void network.refetch()}
           />
         </div>

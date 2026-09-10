@@ -8,6 +8,7 @@ import {
   Bookmark,
   Clock,
   Gauge,
+  Loader2,
   MapPinned,
   Route as RouteIcon,
   ShieldCheck,
@@ -22,7 +23,15 @@ import { JourneyPlanner, type PlannerValues, type QuickJourney } from '../compon
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { EmptyState, ErrorState, PanelSkeleton, StatGridSkeleton } from '../components/ui/Skeleton';
+import { EmptyState, PanelSkeleton, StatGridSkeleton } from '../components/ui/Skeleton';
+import {
+  ApiStatusBanner,
+  describeApiError,
+  ErrorPanel,
+  useLastError,
+  useOutageDuration,
+} from '../components/ui/ApiStatus';
+import { retryFailedQueries } from '../lib/queryClient';
 import { SectionHeading } from '../components/ui/Section';
 import { StatTile } from '../components/ui/StatTile';
 import { CrowdBadge, CrowdLegend, CrowdMeter, ConfidencePill } from '../components/crowd/CrowdIndicators';
@@ -116,13 +125,57 @@ export function CommuterDashboard() {
     navigate(`/routes?${params.toString()}`);
   };
 
-  if (isError) {
+  /*
+   * Error state: say *what* failed (API unreachable vs. database read vs. a bad
+   * request), keep the technical code for debugging and re-run every failing
+   * query — not just this one — so one click restores the whole screen.
+   *
+   * `outage` waits out the first seconds of retrying (and of the automatic
+   * recovery loop) before committing to the panel, so a two-second hiccup stays
+   * invisible while a real outage is explained instead of spinning forever.
+   * `lastError` remembers the cause, because a retry blanks `error` in flight.
+   */
+  const outage = useOutageDuration(!data);
+  const lastError = useLastError(error);
+
+  if (isError || (outage && !data)) {
+    const described = describeApiError(lastError);
     return (
-      <ErrorState
-        title="Dashboard data unavailable"
-        message={(error as Error)?.message}
-        onRetry={() => void refetch()}
-      />
+      <div className="space-y-4">
+        <ErrorPanel
+          title="Dashboard data unavailable"
+          message={described.message}
+          hint={described.hint}
+          details={described.details}
+          onRetry={() => {
+            void refetch();
+            void retryFailedQueries();
+          }}
+        />
+        <ApiStatusBanner />
+      </div>
+    );
+  }
+
+  // First load: a named loading state, so the screen says what it is waiting for.
+  if (!data) {
+    return (
+      <div className="space-y-4">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-2.5"
+        >
+          <Loader2 className="size-4 animate-spin text-pulse-400" aria-hidden />
+          <div>
+            <p className="text-xs font-medium text-mist-100">Loading dashboard data…</p>
+            <p className="mt-0.5 text-3xs text-mist-500">
+              Reading routes, vehicles, occupancy predictions and alerts from the database
+            </p>
+          </div>
+        </div>
+        <PanelSkeleton rows={5} />
+      </div>
     );
   }
 

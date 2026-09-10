@@ -72,7 +72,7 @@ export function SettingsPage() {
     return (
       <ErrorState
         title="Could not load your preferences"
-        message={(profile.error as Error).message}
+        error={profile.error}
         onRetry={() => void profile.refetch()}
       />
     );

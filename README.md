@@ -49,6 +49,8 @@ deterministic 14-day demo dataset.
 | `npm run typecheck` | `tsc --noEmit` across app, shared and server |
 | `npm run smoke` | Renders all eight routes in jsdom against a running API and asserts database-backed content |
 | **`npm run smoke:maps`** | **Same run with a recording mock of the Google Maps SDK + a build-time key: asserts the map really draws corridors, crowd tints, stops, vehicles and popups** |
+| **`npm run check:api`** | **Every endpoint answers, and the dashboard figures are compared against a direct read of the same tables (add `CHECK_API_WRITE=1` to also exercise the write path)** |
+| **`npm run check:recovery`** | **Pulls the API out from under both dashboards: asserts they explain the failure, never crash and recover on their own when it returns** |
 | `npm run db:status` | Row counts for every table + current schema version |
 | **`npm run db:verify`** | **Executable checklist: columns, keys, indexes, constraints, seed minimums and cross-table joins** |
 | `npm run db:refresh` | Rebuild the canonical dataset from the live network model |
@@ -57,7 +59,10 @@ deterministic 14-day demo dataset.
 
 > **Embedded database note:** the zero-config database is a single-process
 > engine. Stop the API before running `db:*` scripts, or point `DATABASE_URL`
-> at a real Postgres/Supabase instance (multi-connection safe).
+> at a real Postgres/Supabase instance (multi-connection safe). The `db:*`
+> scripts now detect the running API and stop with an explanation instead of
+> aborting mid-WASM or silently discarding the write (`DB_ALLOW_CONCURRENT=1`
+> overrides the check).
 
 ### Use Supabase Postgres instead
 
@@ -97,6 +102,23 @@ GOOGLE_MAPS_API_KEY=AIza...
   an empty box. Crowd bands, stops, fleet markers and popups behave identically.
 * A rejected key (`gm_authFailure`) or a failed script load lands in an explicit
   error state with a **Retry** button instead of a blank panel.
+
+### When the API restarts: loading, error and empty states
+
+Every screen reads from Postgres through the API, so the UI has to be honest about
+the three states where there is no data to show:
+
+| State | What the screen does |
+| --- | --- |
+| **Loading** | A named status — *“Loading dashboard data…”* with what is being read — above the layout-matched skeletons. |
+| **Unavailable** | After ~12 s without data, a panel that names the cause: *“Unable to load transportation data. Please check the database connection.”*, plus what to check, the API code (`NETWORK_ERROR · HTTP 0`, `BAD_GATEWAY · HTTP 502`, …) and a **Retry** that re-runs *every* failing query. |
+| **Connected but empty** | *“No transportation data available yet”* with the command that reseeds the demo dataset, instead of rendering empty cards. |
+
+A short outage is designed to be invisible: requests are retried four times with
+backoff (~6 s), the query client refetches on window focus and on reconnect, and a
+background recovery loop re-runs failing queries every 3–30 s — so a `tsx watch`
+restart no longer strands a page on an error until someone reloads.
+`npm run check:recovery` asserts exactly this behaviour.
 
 ### Credentials never reach the browser
 
@@ -387,7 +409,7 @@ instead of dead-ending on an empty screen.
 | `GET` | `/api/maps/network` | Routes, ordered stops, polyline geometry, measured load per stop, fleet positions and notices — one payload for the map layer |
 | `GET` | `/api/maps/journey` | Geometry + crowd state for the corridors a planned journey can use (`origin`, `destination`, `departAfter`, `avoidCrowding`, `maxTransfers`) |
 | `GET` | `/api/maps/directions` | Server-side Directions proxy (`origin=lat,lng`, `destination=lat,lng`, `mode`), road-snapped path; the Google key never leaves the API |
-| `GET` | `/api/dataset/tables` | Every canonical table with live row counts and the requested-name mapping |
+| `GET` | `/api/dataset/tables` | Every canonical table with live row counts and the requested-name mapping. Canonical names resolve through aliases — `stops` → `route_stops`, `vehicles` → `vehicle_snapshots`, `alerts` → `service_alerts`, `users` → `app_users` |
 | `GET` | `/api/dataset/tables/:table` | Paginated records (`limit`, `offset`, `orderBy`, `direction`) |
 | `GET` | `/api/dataset/schema/:table` | Column definitions, types, keys and foreign-key targets |
 | `POST` | `/api/dataset/refresh` | Rebuild the canonical dataset from the network model |
@@ -454,7 +476,9 @@ npx tsc --noEmit     # types
 npm run build        # production bundle
 npm run smoke        # renders all 8 routes headlessly and fails on console errors
 npm run smoke:maps   # mocked Maps SDK: asserts the map + crowd layer really draw
-npm run db:verify    # 59/59 database checks
+npm run check:api    # endpoint sweep + dashboard figures traced back to the tables
+npm run check:recovery   # both dashboards survive and recover from an API outage
+npm run db:verify    # database checks (stop the API first — see the note in §1)
 ```
 
 ---

@@ -18,6 +18,7 @@ import { cn } from '../../lib/utils';
 import { useHealth } from '../../hooks/useTransitData';
 import { LivePill } from '../crowd/CrowdHotspotList';
 import { Button } from '../ui/Button';
+import { ApiStatusBanner } from '../ui/ApiStatus';
 import { Badge, StatusDot } from '../ui/Badge';
 
 interface NavItem {
@@ -357,6 +358,8 @@ export function AppShell() {
           </header>
 
           <main id="main" className="flex-1 px-4 py-5 lg:px-1 lg:py-6">
+            {/* Global data-source health: appears only while a query is failing. */}
+            <ApiStatusBanner className="mb-4" />
             <Outlet />
           </main>
         </div>

@@ -110,7 +110,7 @@ export function DataExplorerPage() {
     return (
       <ErrorState
         title="Dataset unavailable"
-        message={(tables.error as Error)?.message}
+        error={tables.error}
         onRetry={() => void tables.refetch()}
       />
     );
@@ -313,7 +313,7 @@ export function DataExplorerPage() {
             {rows.isError ? (
               <ErrorState
                 title="Could not read this table"
-                message={(rows.error as Error)?.message}
+                error={rows.error}
                 onRetry={() => void rows.refetch()}
               />
             ) : rows.isLoading ? (
