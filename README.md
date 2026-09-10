@@ -48,6 +48,7 @@ deterministic 14-day demo dataset.
 | `npm run build` | Production frontend build |
 | `npm run typecheck` | `tsc --noEmit` across app, shared and server |
 | `npm run smoke` | Renders all eight routes in jsdom against a running API and asserts database-backed content |
+| **`npm run smoke:maps`** | **Same run with a recording mock of the Google Maps SDK + a build-time key: asserts the map really draws corridors, crowd tints, stops, vehicles and popups** |
 | `npm run db:status` | Row counts for every table + current schema version |
 | **`npm run db:verify`** | **Executable checklist: columns, keys, indexes, constraints, seed minimums and cross-table joins** |
 | `npm run db:refresh` | Rebuild the canonical dataset from the live network model |
@@ -71,6 +72,32 @@ Nothing else changes: schema, views, functions, RLS policies and seed data are
 engine-agnostic, and the API reports which driver it is using at `GET /api/health`
 (`supabase-postgres` when `DATABASE_URL` is set, `embedded-postgres` otherwise).
 
+### Turn on real Google Maps
+
+Google Maps Platform is the basemap and the geography; TransitPulse is the
+intelligence layer drawn on top of it. Add keys to `.env` (git-ignored):
+
+```bash
+# Browser key — Maps JavaScript API, restricted to the HTTP referrers the demo
+# runs on (http://localhost:5173/*, your preview host). Served to the page by
+# GET /api/maps/config, or baked in at build time as VITE_GOOGLE_MAPS_API_KEY.
+GOOGLE_MAPS_BROWSER_KEY=AIza...
+
+# Server key — Directions API, restricted by IP. Used only by the API process,
+# never sent to the browser (GET /api/maps/directions proxies it).
+GOOGLE_MAPS_API_KEY=AIza...
+```
+
+* Every map surface loads the SDK from `maps.googleapis.com` with the
+  referrer-restricted key, fits the bounds of the network or the selected
+  itinerary, and draws the crowd layer with `google.maps.Polyline` / `Marker` /
+  `InfoWindow`.
+* **No key configured?** The panel says so on screen and falls back to a labelled
+  SVG schematic of the same Postgres geometry — never a Google look-alike, never
+  an empty box. Crowd bands, stops, fleet markers and popups behave identically.
+* A rejected key (`gm_authFailure`) or a failed script load lands in an explicit
+  error state with a **Retry** button instead of a blank panel.
+
 ### Credentials never reach the browser
 
 * The database connection string lives in the server-side environment only
@@ -80,6 +107,12 @@ engine-agnostic, and the API reports which driver it is using at `GET /api/healt
   `PREDICTION_MODEL_TIMEOUT_MS`, `PREDICTION_WEATHER`) are read.
 * The frontend calls relative `/api/...` URLs; there is no `VITE_*` database
   variable, no Supabase key and no connection string in the bundle.
+* The Google **browser** key is referrer-restricted and public by design; the
+  **server** key is IP-restricted and only ever used inside the API. The one
+  Maps variable the frontend reads is `VITE_GOOGLE_MAPS_API_KEY`.
+* The Google browser key is referrer-restricted and public by design; the
+  Directions key is IP-restricted and proxied. `VITE_GOOGLE_MAPS_API_KEY` is the
+  only `VITE_*` variable the frontend reads.
 * Row Level Security is enabled on every table: network/timetable/crowd data and
   the published demo dataset are public read-only, rider-owned rows are private,
   and writes go through the Express API using the service role.
@@ -188,10 +221,10 @@ npm run db:verify
 
 | Area | Route | What it answers |
 | --- | --- | --- |
-| **1. Commuter dashboard** | `/` | *Know the crowd before you board.* — From / To / Departure time and one **Find Best Route** button, above the next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys and active alerts. |
-| **2. Route results** | `/routes` | Which option should I take? *AI analyzing routes…* while the planner runs, then one card per option: route number and name, travel time, waiting time, predicted occupancy, crowd level, AI confidence and a comfort indicator — clearly badged **AI Recommended**, **Fastest Route** and **Least Crowded Route**, with **Why this route?** expanding to `travel + waiting + crowd penalty = route score`. |
-| **3. Route details** | `/routes/details` | Is this really the best choice? Occupancy prediction with AI confidence and crowd trend, leg-by-leg boarding plan, estimated arrival per leg, forecast chart, model factor breakdown, score arithmetic (`/routes/details` keeps the trade-off tab) and alternative routes with what each one avoids. |
-| **4. Operator Command Center** | `/operator` | What needs attention in the next hour? A live status bar (clock, network state, model), the **network overview** (active routes, active vehicles, high-crowd routes, average network occupancy), **live route status** for every route (occupancy, crowd band, forecast, vehicles, operating status), a schematic **crowd heatmap** with live / +30 min / 24 h-peak views, the **AI alert feed** (route, predicted occupancy, ETA, severity, recommended action), **AI recommendations** (deploy a vehicle, redirect passengers, tighten headway, fleet readiness — each with evidence, expected impact and a one-click *Dispatch* that publishes the advisory into `alerts`), and **route analytics** (measured → predicted trend per route, current vs forecast). Select any route to open the **AI Decision console**: *AI Detected Congestion* (current vs predicted occupancy, time to congestion, engine scan curve), *AI Recommended Action* (numbered plays with evidence), the **expected impact** bars (without intervention → with intervention, labelled as a simulated projection) and the **Apply AI Recommendation** button that writes the ledger, releases a vehicle and raises the alert. |
+| **1. Commuter dashboard** | `/` | *Know the crowd before you board.* — From / To / Departure time and one **Find Best Route** button, above the next-journey recommendation, the **live network map** (Google Maps with the crowd layer: corridor tint = predicted band, markers = the simulated fleet), live network pressure, departure boards with predicted load per service, saved journeys and active alerts. |
+| **2. Route results** | `/routes` | Which option should I take? *AI analyzing routes…* while the planner runs, then one card per option: route number and name, travel time, waiting time, predicted occupancy, crowd level, AI confidence and a comfort indicator — clearly badged **AI Recommended**, **Fastest Route** and **Least Crowded Route**, with **Why this route?** expanding to `travel + waiting + crowd penalty = route score`. Above the cards, the **journey map** draws the selected itinerary on Google Maps: highlighted corridor, faint alternatives, every stop and each boarding window's predicted crowd band — press **Show on map** on any card to switch the highlight. |
+| **3. Route details** | `/routes/details` | Is this really the best choice? Occupancy prediction with AI confidence and crowd trend, leg-by-leg boarding plan, estimated arrival per leg, forecast chart, model factor breakdown, score arithmetic (`/routes/details` keeps the trade-off tab) alternatives with what each one avoids, and the itinerary drawn on Google Maps above the tabs — click any leg or stop for measured occupancy, forecast, AI confidence and expected trend. |
+| **4. Operator Command Center** | `/operator` | What needs attention in the next hour? A live status bar (clock, network state, model), the **control-room map** — every corridor on Google Maps tinted by predicted crowding, with stops, the simulated fleet, service notices, and a rail beside it carrying **Network status** (active routes, active vehicles, average occupancy, high-crowd routes), the **AI alert** (route, current → predicted occupancy, minutes to the threshold, engine scan curve) and the **AI action** (numbered interventions, the projected-impact bars and the apply button), **live route status** for every route (occupancy, crowd band, forecast, vehicles, operating status), a schematic **crowd heatmap** with live / +30 min / 24 h-peak views, the **AI alert feed** (route, predicted occupancy, ETA, severity, recommended action), **AI recommendations** (deploy a vehicle, redirect passengers, tighten headway, fleet readiness — each with evidence, expected impact and a one-click *Dispatch* that publishes the advisory into `alerts`), and **route analytics** (measured → predicted trend per route, current vs forecast). Select any route to open the **AI Decision console**: *AI Detected Congestion* (current vs predicted occupancy, time to congestion, engine scan curve), *AI Recommended Action* (numbered plays with evidence), the **expected impact** bars (without intervention → with intervention, labelled as a simulated projection) and the **Apply AI Recommendation** button that writes the ledger, releases a vehicle and raises the alert. |
 | **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
 | **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
 | **7. Prediction engine** | `/engine` | How does the AI actually decide? The five-stage pipeline, the input catalogue, the crowd-classification table (48% → Low, 72% → Moderate, 91% → High) and a live simulator: pick a route, horizon and weather scenario and watch the predicted occupancy, crowd level, confidence and per-factor contribution recompute from the API. |
@@ -350,6 +383,10 @@ instead of dead-ending on an empty screen.
 | `GET\|POST` | `/api/watchlist` (`/:id`, `/:id/toggle`) | Saved journeys |
 | `GET` | `/api/dashboard` | The commuter dashboard payload |
 | `GET` | `/api/settings/options` | Stops, modes and languages for Settings |
+| `GET` | `/api/maps/config` | What the browser may know about the Maps setup (referrer-restricted browser key, Directions availability) |
+| `GET` | `/api/maps/network` | Routes, ordered stops, polyline geometry, measured load per stop, fleet positions and notices — one payload for the map layer |
+| `GET` | `/api/maps/journey` | Geometry + crowd state for the corridors a planned journey can use (`origin`, `destination`, `departAfter`, `avoidCrowding`, `maxTransfers`) |
+| `GET` | `/api/maps/directions` | Server-side Directions proxy (`origin=lat,lng`, `destination=lat,lng`, `mode`), road-snapped path; the Google key never leaves the API |
 | `GET` | `/api/dataset/tables` | Every canonical table with live row counts and the requested-name mapping |
 | `GET` | `/api/dataset/tables/:table` | Paginated records (`limit`, `offset`, `orderBy`, `direction`) |
 | `GET` | `/api/dataset/schema/:table` | Column definitions, types, keys and foreign-key targets |
@@ -396,12 +433,27 @@ The whole interface was re-cut without touching behaviour, data flow or schema:
 | **Navigation** | Sidebar regrouped into **Rider** / **Operations** with active rails; sticky header carries page context; mobile drawer traps focus by Escape and the tab bar is now four tabs + **More**. |
 | **Accessibility** | Skip link, `:focus-visible` rings on every interactive element, real `<form>` submits (Enter works), `aria-pressed`/`aria-expanded`/`aria-selected` on toggles and pickers, `role="status"`/`role="alert"` on async feedback, labels on every icon-only control, `prefers-reduced-motion` respected. |
 
-### 6.3 Checks
+### 6.3 The maps layer (round 8)
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| **SDK loader** | `src/lib/maps.ts` | Loads the real Maps JavaScript API once per page (build-time key, else the API's published browser key), handles `gm_authFailure`, a 12 s timeout and retry, and exposes the crowd palette, marker symbols and path styles the layer draws with. |
+| **Canvas + layers** | `src/components/map/GoogleMapCanvas.tsx`, `layers.tsx` | A thin `google.maps.Map` wrapper (dark base style, bounds fitting, resize handling) plus declarative layers: corridors, stops, fleet markers, notices, journey legs. Popups are DOM-built — no injected HTML. |
+| **Route/journey surfaces** | `JourneyMap.tsx`, `OperatorNetworkMap.tsx` | Rider: the selected itinerary emphasised over faint alternatives, with an opt-in *my location* marker. Operator: the whole network, click a corridor to focus the AI console on it. |
+| **Honest fallback** | `MapFallback.tsx`, `SchematicNetworkMap.tsx` | Without a key (or after a failed load) the same geometry renders as a labelled schematic with the exact reason and the environment variable to set. |
+| **Server side** | `server/{routes,services,repositories}/map*` | `/api/maps/*` assembles geometry from `route_stops`, load from `v_line_crowding_now`, forecasts from `occupancy_predictions` and positions from `vehicle_snapshots`; `fetchDirections` proxies Google with the server key (6 s timeout, 10 min cache). |
+
+Crowd colour is always the three shared bands — `< 60 %` green, `60–85 %`
+yellow, `> 85 %` red — and every map payload carries `simulated: true` plus a
+disclaimer, so no screen can present the demo fleet as real tracking.
+
+### 6.4 Checks
 
 ```bash
 npx tsc --noEmit     # types
 npm run build        # production bundle
 npm run smoke        # renders all 8 routes headlessly and fails on console errors
+npm run smoke:maps   # mocked Maps SDK: asserts the map + crowd layer really draw
 npm run db:verify    # 59/59 database checks
 ```
 
@@ -409,8 +461,11 @@ npm run db:verify    # 59/59 database checks
 
 ## 7. Demo script (3 minutes)
 
-1. **Home** — read the headline *"Know the crowd before you board."*, then pick a
-   saved journey chip (or `Tambaram` → `Tidel Park`) and press **Find Best Route**.
+1. **Home** — read the headline *"Know the crowd before you board."*, then scroll to
+   the **live network map**: real Google Maps with TransitPulse's crowd colours on
+   the corridors and the simulated fleet on it (the panels say **SIMULATED DATA**
+   and *Demo network — no live fleet feed*). Pick a saved journey chip (or
+   `Tambaram` → `Tidel Park`) and press **Find Best Route**.
 2. **AI analyzing routes…** — the pipeline animates while the planner reads the
    timetable, predicts a load for every leg and scores the options. For the
    clearest demo, flip **Departure time** to *Leave at* `18:20` — the evening
@@ -421,7 +476,8 @@ npm run db:verify    # 59/59 database checks
    penalty = route score`, with the crowd penalty explaining *why* the
    recommendation is not simply the fastest train. Compare with the **Fastest
    Route** and **Least Crowded Route** cards — each shows its own arithmetic.
-4. **Route details** — the occupancy prediction card (peak %, AI confidence, crowd
+4. **Route details** — the itinerary on the map (click a leg for measured vs
+   predicted occupancy, confidence and trend), then the occupancy prediction card (peak %, AI confidence, crowd
    trend up / down the line, score), then the leg-by-leg boarding plan with
    estimated arrivals, the forecast chart (measured history → predicted band), the
    model breakdown that shows *why*, and the alternative routes below.
@@ -434,12 +490,15 @@ npm run db:verify    # 59/59 database checks
    (network state, clock, model version), then the four overview tiles. Point at
    the **crowd heatmap** and flip it from *Live load* to *+30 min* and *24 h peak*
    — the corridors recolour because the engine is predicting, not just reporting.
-   Below it the **AI alerts** list the routes the model expects to crowd (affected
-   route, predicted occupancy, ETA, severity, recommended action), and **AI
-   recommendations** propose the interventions with the numbers behind them —
+   Beside the map the rail carries **Network status**, the **AI alert** and the
+   **AI action** for the focused corridor; below it the **AI alerts** list the
+   routes the model expects to crowd (affected route, predicted occupancy, ETA,
+   severity, recommended action), and **AI recommendations** propose the
+   interventions with the numbers behind them —
    press **Dispatch** and the advisory is written into the `alerts` table.
    **Route analytics** closes the loop with measured → predicted trends.
-   Now click a route in the live table — the **AI Decision console** opens with
+   Now click a corridor on the map (or a row in the live table) — the map focuses
+   that route and the **AI Decision console** opens with
    *AI Detected Congestion*: current occupancy, predicted occupancy, time to
    congestion and the engine's scan curve against the threshold. Read the three
    numbered actions (deploy a vehicle, redirect passengers, notify riders), then
@@ -471,7 +530,12 @@ these are intentionally left for the next iteration:
 * **Authentication** — rider identity is a demo profile; Supabase Auth + the
   existing `auth_user_id` column and RLS policies are the intended path.
 * **Live vehicle positions** — `vehicles.next_stop_id` and `vehicle_snapshots` are
-  seeded; a GTFS-Realtime feed would replace the simulated fleet state.
+  seeded; a GTFS-Realtime feed would replace the simulated fleet state. The map
+  draws those rows and labels them as simulated — it never claims live tracking.
+* **Google Maps keys** — the Maps JavaScript API needs a referrer-restricted
+  browser key, which cannot live in the repository. Until one is supplied the map
+  panel shows the labelled schematic; with a key, the same components draw on the
+  real basemap with no code change.
 * **Model training** — the shipped predictor is a transparent statistical
   ensemble rather than a trained network, which keeps the demo explainable and
   dependency-free. The `OccupancyPredictor` seam and `PREDICTION_MODEL_URL`

@@ -37,6 +37,10 @@ export const queryKeys = {
   predictionRoutes: ['prediction', 'routes'] as const,
   prediction: (params: Record<string, unknown>) => ['prediction', params] as const,
   predictionWeather: ['prediction', 'weather'] as const,
+  mapsConfig: ['maps', 'config'] as const,
+  mapsNetwork: ['maps', 'network'] as const,
+  mapsJourney: (params: Record<string, unknown>) => ['maps', 'journey', params] as const,
+  directions: (params: Record<string, unknown>) => ['maps', 'directions', params] as const,
   datasetTables: ['dataset', 'tables'] as const,
   datasetRows: (table: string, params: Record<string, unknown>) =>
     ['dataset', 'rows', table, params] as const,

@@ -48,6 +48,8 @@ export function RouteOptionCard({
   option,
   isRecommended,
   onOpen,
+  onSelect,
+  selected = false,
   className,
   style,
   defaultOpen = false,
@@ -55,6 +57,9 @@ export function RouteOptionCard({
   option: RouteOption;
   isRecommended: boolean;
   onOpen: () => void;
+  /** Show this itinerary on the map — drives the highlighted corridor. */
+  onSelect?: () => void;
+  selected?: boolean;
   className?: string;
   style?: React.CSSProperties;
   defaultOpen?: boolean;
@@ -77,6 +82,8 @@ export function RouteOptionCard({
         isRecommended
           ? 'border-pulse-400/40 shadow-lift ring-1 ring-pulse-400/25'
           : 'border-white/10',
+        selected && !isRecommended ? 'border-sky-glow/40 ring-1 ring-sky-glow/25' : '',
+        selected ? 'bg-white/[0.035]' : '',
         className,
       )}
       style={style}
@@ -227,16 +234,29 @@ export function RouteOptionCard({
 
       <CardFooter className="mt-4">
         <p className="min-w-0 flex-1 text-2xs leading-relaxed text-mist-500">{option.headline}</p>
-        <Button
-          size="sm"
-          variant={isRecommended ? 'primary' : 'outline'}
-          iconRight={<ChevronRight className="size-3.5" aria-hidden />}
-          onClick={onOpen}
-          aria-label={`View details for ${option.lineCodes.join(' then ') || option.routeName}`}
-          className="shrink-0"
-        >
-          Route details
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {onSelect ? (
+            <Button
+              size="sm"
+              variant={selected ? 'secondary' : 'ghost'}
+              icon={<MapPin className="size-3.5" />}
+              onClick={onSelect}
+              aria-pressed={selected}
+              aria-label={`Show ${option.lineCodes.join(' then ') || option.routeName} on the map`}
+            >
+              {selected ? 'On map' : 'Show on map'}
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant={isRecommended ? 'primary' : 'outline'}
+            iconRight={<ChevronRight className="size-3.5" aria-hidden />}
+            onClick={onOpen}
+            aria-label={`View details for ${option.lineCodes.join(' then ') || option.routeName}`}
+          >
+            Route details
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

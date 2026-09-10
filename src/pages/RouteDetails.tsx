@@ -29,6 +29,7 @@ import { CrowdBadge, CrowdLegend, CrowdMeter, ConfidencePill } from '../componen
 import { ForecastChart } from '../components/crowd/ForecastChart';
 import { FactorBreakdown } from '../components/crowd/FactorBreakdown';
 import { LegTimeline } from '../components/route/LegTimeline';
+import { JourneyMap } from '../components/map/JourneyMap';
 import { ScoreBreakdown } from '../components/route/ScoreBreakdown';
 import { OccupancyPredictionCard } from '../components/route/OccupancyPredictionCard';
 import { LivePill } from '../components/crowd/CrowdHotspotList';
@@ -137,6 +138,35 @@ export function RouteDetails() {
           </Button>
         </div>
       </div>
+
+      {/* -------------------------------------------------------------- map */}
+      {plan.data && plan.data.options.length ? (
+        <JourneyMap
+          origin={origin}
+          destination={destination}
+          departAfter={departAfter}
+          options={plan.data.options}
+          selectedOptionId={option?.id ?? null}
+          onSelectOption={(optionId) => {
+            const params = new URLSearchParams(searchParams);
+            params.set('option', optionId);
+            navigate(`/routes/details?${params.toString()}`);
+          }}
+          heightClass="h-[300px] sm:h-[380px] lg:h-[440px]"
+          title="Route on the map"
+          subtitle={
+            option
+              ? `${option.lineCodes.filter(Boolean).join(' → ')} · peak ${formatPercent(option.crowdRisk)} predicted`
+              : undefined
+          }
+          footer={
+            <span>
+              Click any leg or stop to read its measured occupancy, forecast, confidence and expected
+              trend. Switching itinerary re-draws the map.
+            </span>
+          }
+        />
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
         {/* ------------------------------------------- left: itinerary + tabs */}

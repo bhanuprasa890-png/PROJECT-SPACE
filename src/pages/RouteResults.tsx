@@ -14,6 +14,7 @@ import type { RecommendationKind, RouteOption } from '@shared/types';
 import { useNetwork, usePlan } from '../hooks/useTransitData';
 import { JourneyPlanner, type PlannerValues } from '../components/route/JourneyPlanner';
 import { RouteOptionCard } from '../components/route/RouteOptionCard';
+import { JourneyMap } from '../components/map/JourneyMap';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -57,6 +58,8 @@ export function RouteResults() {
     maxTransfers,
   }));
   const [sort, setSort] = useState<SortMode>('recommended');
+  /** Which itinerary the map is highlighting — starts on the AI recommendation. */
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   useEffect(() => {
     setValues((previous) => ({
@@ -94,6 +97,17 @@ export function RouteResults() {
   const recommended = plan.data?.options.find(
     (option) => option.id === plan.data?.recommendedOptionId,
   );
+
+  // Keep the map in step with the result set: default to the AI pick, and follow
+  // the sort order when the rider has not chosen an itinerary themselves.
+  useEffect(() => {
+    if (!options.length) return;
+    setSelectedOptionId((current) =>
+      current && options.some((option) => option.id === current)
+        ? current
+        : plan.data?.recommendedOptionId ?? options[0].id,
+    );
+  }, [options, plan.data?.recommendedOptionId]);
   const worst = plan.data?.options.find((option) => option.id === plan.data?.worstOptionId);
 
   const openDetails = (option: RouteOption): void => {
@@ -204,6 +218,25 @@ export function RouteResults() {
               </div>
             </Card>
 
+            {/* --------------------------------------------------- journey map */}
+            <JourneyMap
+              origin={origin}
+              destination={destination}
+              departAfter={departAfter}
+              avoidCrowding={avoidCrowding}
+              maxTransfers={maxTransfers}
+              options={options}
+              selectedOptionId={selectedOptionId}
+              onSelectOption={setSelectedOptionId}
+              title={`${plan.data.origin.name} → ${plan.data.destination.name}`}
+              footer={
+                <span>
+                  The highlighted corridor is the itinerary you selected; the faint corridors are the
+                  alternatives they were compared against.
+                </span>
+              }
+            />
+
             <div className="space-y-3.5">
               {options.map((option, index) => (
                 <RouteOptionCard
@@ -212,6 +245,8 @@ export function RouteResults() {
                   isRecommended={option.id === plan.data?.recommendedOptionId}
                   defaultOpen={option.kind === 'best' && options.length <= 4}
                   onOpen={() => openDetails(option)}
+                  onSelect={() => setSelectedOptionId(option.id)}
+                  selected={option.id === selectedOptionId}
                   style={{ animationDelay: `${index * 70}ms` }}
                 />
               ))}

@@ -10,6 +10,10 @@ import type {
   CrowdHotspot,
   CrowdReading,
   CommandCenter,
+  DirectionsResult,
+  MapJourneyPayload,
+  MapNetworkPayload,
+  MapsConfigPayload,
   CreateAlertInput,
   ForecastSeries,
   HealthReport,
@@ -310,6 +314,44 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+
+  /* ------------------------------------------------------------- google maps */
+
+  /**
+   * What the browser may know about the Maps setup: a referrer-restricted browser
+   * key when one is configured, and whether the API can proxy Directions. The
+   * server key never leaves the API process.
+   */
+  mapsConfig: () => request<MapsConfigPayload>('/maps/config'),
+
+  /** Every route, stop, vehicle and alert with coordinates, for the map layers. */
+  mapsNetwork: () => request<MapNetworkPayload>('/maps/network'),
+
+  /** Map view of a planned journey: paths, stop nodes and predicted load per leg. */
+  mapsJourney: (params: {
+    origin: string;
+    destination: string;
+    departAfter?: string;
+    avoidCrowding?: boolean;
+    maxTransfers?: number;
+    analyzeMs?: number;
+  }) =>
+    request<MapJourneyPayload>(
+      `/maps/journey${query({
+        origin: params.origin,
+        destination: params.destination,
+        departAfter: params.departAfter,
+        avoidCrowding: params.avoidCrowding,
+        maxTransfers: params.maxTransfers,
+        analyzeMs: params.analyzeMs,
+      })}`,
+    ),
+
+  /** Directions proxy — road-snapped path; the Google key stays on the server. */
+  directions: (params: { origin: string; destination: string; mode?: string }) =>
+    request<DirectionsResult>(
+      `/maps/directions${query({ origin: params.origin, destination: params.destination, mode: params.mode })}`,
+    ),
 
   /* ------------------------------------------------------------- prediction */
 

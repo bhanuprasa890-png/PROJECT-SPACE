@@ -420,3 +420,109 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Google Maps popups                                                          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The TransitPulse intelligence layer draws its own popups instead of Google's
+ * default white bubble. These hooks are undocumented but stable in practice, and
+ * every rule is scoped to `.gm-style` / `.tp-info`, so if Google ever changes the
+ * markup the popup simply falls back to the stock bubble.
+ */
+.gm-style .gm-style-iw-c {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gm-style .gm-style-iw-d {
+  overflow: hidden !important;
+}
+
+.gm-style .gm-style-iw-tc::after {
+  background: transparent !important;
+}
+
+.gm-style .gm-ui-hover-effect {
+  opacity: 0.65;
+  filter: invert(1);
+}
+
+.tp-info {
+  min-width: 13rem;
+  max-width: 17.5rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  background-color: color-mix(in oklab, var(--color-ink-900) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  font-family: var(--font-sans);
+  color: var(--color-mist-200);
+  box-shadow: var(--shadow-panel);
+}
+
+.tp-info__eyebrow {
+  font-size: var(--text-3xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-mist-500);
+}
+
+.tp-info__title {
+  margin-top: 0.15rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-mist-50);
+}
+
+.tp-info__subtitle {
+  margin-top: 0.1rem;
+  font-size: var(--text-2xs);
+  color: var(--color-mist-400);
+}
+
+.tp-info__rows {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.tp-info__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: var(--text-2xs);
+}
+
+.tp-info__row dt {
+  color: var(--color-mist-500);
+}
+
+.tp-info__value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-mist-100);
+}
+
+.tp-info__value--low {
+  color: var(--color-crowd-low);
+}
+
+.tp-info__value--moderate {
+  color: var(--color-crowd-moderate);
+}
+
+.tp-info__value--high {
+  color: var(--color-crowd-high);
+}
+
+.tp-info__note {
+  margin-top: 0.5rem;
+  font-size: var(--text-3xs);
+  line-height: 1.35;
+  color: var(--color-mist-500);
+}

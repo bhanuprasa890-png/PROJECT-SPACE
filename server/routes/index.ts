@@ -8,6 +8,7 @@ import { operatorRouter } from './operator.routes';
 import { riderRouter } from './rider.routes';
 import { predictionRouter } from './prediction.routes';
 import { datasetRouter } from './dataset.routes';
+import { mapsRouter } from './maps.routes';
 
 /**
  * API surface (all paths are mounted under `/api`).
@@ -25,6 +26,8 @@ import { datasetRouter } from './dataset.routes';
  *   rider    GET    /dashboard | /profile | /settings/options | /watchlist
  *   dataset  GET    /dataset/tables | /dataset/tables/:table | /dataset/schema/:table
  *            POST   /dataset/refresh            rebuild canonical demo dataset
+ *   maps     GET    /maps/config | /maps/network | /maps/journey
+ *            GET    /maps/directions           server-side Google Directions proxy
  */
 export const apiRouter = Router();
 
@@ -37,3 +40,4 @@ apiRouter.use(alertsRouter);
 apiRouter.use(operatorRouter);
 apiRouter.use(riderRouter);
 apiRouter.use(datasetRouter);
+apiRouter.use(mapsRouter);

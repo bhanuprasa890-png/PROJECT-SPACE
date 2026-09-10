@@ -278,6 +278,67 @@ export function useApplyAiDecision() {
   });
 }
 
+/* -------------------------------------------------------------------------- */
+/* Google Maps layer                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** Maps configuration: browser key (if configured) and Directions availability. */
+export function useMapsConfig() {
+  return useQuery({
+    queryKey: queryKeys.mapsConfig,
+    queryFn: api.mapsConfig,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** The whole network in map form — refreshed so the vehicle markers stay live. */
+export function useMapsNetwork(refetchIntervalMs = 45_000) {
+  return useQuery({
+    queryKey: queryKeys.mapsNetwork,
+    queryFn: api.mapsNetwork,
+    staleTime: 20_000,
+    refetchInterval: refetchIntervalMs,
+  });
+}
+
+/** Map geometry + crowd bands for a planned journey. */
+export function useMapsJourney(
+  params: {
+    origin: string;
+    destination: string;
+    departAfter?: string;
+    avoidCrowding?: boolean;
+    maxTransfers?: number;
+    analyzeMs?: number;
+  } | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.mapsJourney(params ?? {}),
+    queryFn: () => api.mapsJourney(params as NonNullable<typeof params>),
+    enabled: Boolean(params?.origin && params?.destination) && enabled,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Road-snapped path between two coordinates, via the API's Directions proxy.
+ * Silently unavailable (503) when no server key is configured — callers keep the
+ * stop-to-stop geometry in that case.
+ */
+export function useRoadPath(
+  params: { origin: string; destination: string; mode?: string } | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.directions(params ?? {}),
+    queryFn: () => api.directions(params as NonNullable<typeof params>),
+    enabled: Boolean(params?.origin && params?.destination) && enabled,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+}
+
 export function useOperatorOverview(windowHours = 24) {
   return useQuery({
     queryKey: queryKeys.operator(windowHours),

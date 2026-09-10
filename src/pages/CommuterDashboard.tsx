@@ -8,6 +8,7 @@ import {
   Bookmark,
   Clock,
   Gauge,
+  MapPinned,
   Route as RouteIcon,
   ShieldCheck,
   Sparkles,
@@ -27,6 +28,7 @@ import { StatTile } from '../components/ui/StatTile';
 import { CrowdBadge, CrowdLegend, CrowdMeter, ConfidencePill } from '../components/crowd/CrowdIndicators';
 import { CrowdHotspotList, LivePill } from '../components/crowd/CrowdHotspotList';
 import { LegTimeline } from '../components/route/LegTimeline';
+import { OperatorNetworkMap } from '../components/map/OperatorNetworkMap';
 import { severityTone, formatClock, formatDuration, formatPercent, cn } from '../lib/utils';
 
 const STAT_ICONS: Record<string, typeof Clock> = {
@@ -239,6 +241,19 @@ export function CommuterDashboard() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* ------------------------------------------------------- network map */}
+      <section aria-labelledby="network-map" className="space-y-3">
+        <SectionHeading
+          id="network-map"
+          eyebrow="Live map"
+          title="Where the crowds are right now"
+          description="The TransitPulse crowd layer drawn on Google Maps: corridor tint is the predicted crowd band, markers are the simulated fleet."
+          icon={MapPinned}
+          actions={<LivePill label="Crowd layer" />}
+        />
+        <OperatorNetworkMap heightClass="h-[320px] sm:h-[400px] xl:h-[460px]" />
       </section>
 
       {/* --------------------------------------- next journey + network pressure */}

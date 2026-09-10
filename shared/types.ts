@@ -1086,3 +1086,145 @@ export interface AiDecisionApplyResult {
   intervention: AiInterventionSummary;
   effects: AiDecisionEffects;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Google Maps layer                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `[longitude, latitude]` — the order Google's Polyline and GeoJSON APIs expect,
+ * so a payload can go straight into the SDK without re-ordering.
+ */
+export type MapPoint = [number, number];
+
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface MapStopNode {
+  /** Stop id when the canonical `stops` row could be matched by name. */
+  id: string | null;
+  name: string;
+  sequence: number;
+  lat: number;
+  lng: number;
+  interchange: boolean;
+  dailyBoardings: number;
+  /** Latest measured load at this stop from `v_line_crowding_now`. */
+  liveRatio: number | null;
+  liveLevel: CrowdLevel | null;
+  onboardCount: number | null;
+  observedAt: string | null;
+}
+
+export interface MapRouteGeometry {
+  routeId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  mode: TransitMode;
+  headwayMinutes: number;
+  capacityPerVehicle: number;
+  /** Ordered stops, straight from `route_stops`. */
+  stops: MapStopNode[];
+  /** Polyline in [lng, lat] pairs, stop to stop. */
+  path: MapPoint[];
+  /** Next AI forecast from `occupancy_predictions`. */
+  predictedPct: number | null;
+  predictedLevel: CrowdLevel | null;
+  confidencePct: number | null;
+  predictionTime: string | null;
+  worstStopName: string | null;
+}
+
+export interface MapVehicleMarker {
+  id: string;
+  vehicleNumber: string;
+  routeId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  mode: TransitMode;
+  capacity: number;
+  occupancy: number;
+  ratio: number;
+  level: CrowdLevel;
+  status: string;
+  lat: number;
+  lng: number;
+  updatedAt: string;
+  nextStopName: string | null;
+  predictedPct: number | null;
+  confidencePct: number | null;
+}
+
+export interface MapAlertMarker {
+  id: string;
+  severity: AlertSeverity;
+  category: string;
+  title: string;
+  status: string;
+  routeId: string | null;
+  routeNumber: string | null;
+  color: string | null;
+  stopName: string | null;
+  lat: number;
+  lng: number;
+  startsAt: string;
+}
+
+/** `GET /api/maps/network` — everything the map layer draws, in one round trip. */
+export interface MapNetworkPayload {
+  simulated: true;
+  disclaimer: string;
+  generatedAt: string;
+  timeZone: string;
+  city: string;
+  bounds: MapBounds | null;
+  routes: MapRouteGeometry[];
+  vehicles: MapVehicleMarker[];
+  alerts: MapAlertMarker[];
+  totals: { routes: number; stops: number; vehicles: number; alerts: number };
+}
+
+/**
+ * `GET /api/maps/journey` — geometry for the routes a planned journey can use.
+ * The planner payload stays the source of truth for the options themselves.
+ */
+export interface MapJourneyPayload {
+  simulated: true;
+  disclaimer: string;
+  generatedAt: string;
+  originStopId: string;
+  destinationStopId: string;
+  departAfter: string;
+  lineIds: string[];
+  routes: MapRouteGeometry[];
+  vehicles: MapVehicleMarker[];
+  bounds: MapBounds | null;
+}
+
+/** `GET /api/maps/config` — the only Maps configuration the browser may see. */
+export interface MapsConfigPayload {
+  /** HTTP-referrer restricted browser key for the Maps JavaScript API. */
+  browserKey: string | null;
+  /** Where that key came from, so the UI can explain the setup. */
+  keySource: 'server-env' | 'none';
+  /** True when the API holds an IP-restricted key for the Directions proxy. */
+  directions: boolean;
+  simulated: true;
+  hint: string;
+}
+
+/** `GET /api/maps/directions` — road-snapped path from the Directions proxy. */
+export interface DirectionsResult {
+  source: 'google-directions';
+  mode: string;
+  path: MapPoint[];
+  distanceMeters: number | null;
+  durationSeconds: number | null;
+  summary: string | null;
+}

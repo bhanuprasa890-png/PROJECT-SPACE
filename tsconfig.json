@@ -5,7 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client", "node"],
+    "types": ["vite/client", "node", "google.maps"],
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
     "isolatedModules": true,

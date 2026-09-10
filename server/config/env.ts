@@ -32,6 +32,23 @@ export const env = {
   defaultProfileId: process.env.DEFAULT_PROFILE_ID ?? 'profile-ava',
 
   /**
+   * Google Maps Platform.
+   *
+   * Two keys, two jobs. The *browser* key is HTTP-referrer restricted and is the
+   * only one a page may hold; the *server* key is IP restricted and is used
+   * exclusively by the Directions proxy in `server/services/map.ts`, so it never
+   * reaches the client. Both are optional — without them the app falls back to a
+   * clearly labelled schematic drawn from the dataset instead of pretending to be
+   * Google Maps.
+   */
+  maps: {
+    browserKey: process.env.GOOGLE_MAPS_BROWSER_KEY?.trim() || null,
+    serverKey: process.env.GOOGLE_MAPS_API_KEY?.trim() || null,
+    directionsEnabled: bool(process.env.GOOGLE_MAPS_DIRECTIONS, true),
+    timeZone: process.env.MAPS_TIME_ZONE?.trim() || 'Asia/Kolkata',
+  },
+
+  /**
    * Prediction layer configuration.
    *
    * The prototype ships a heuristic ensemble. Point `PREDICTION_MODEL_URL` at a

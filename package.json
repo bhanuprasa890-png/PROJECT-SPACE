@@ -17,7 +17,8 @@
     "db:sql": "tsx server/scripts/db.ts sql",
     "smoke": "node scripts/smoke.mjs",
     "db:verify": "tsx server/scripts/db.ts verify",
-    "db:refresh": "tsx server/scripts/db.ts refresh"
+    "db:refresh": "tsx server/scripts/db.ts refresh",
+    "smoke:maps": "SMOKE_MOCK_MAPS=1 node scripts/smoke.mjs"
   },
   "repository": {
     "type": "git",
@@ -51,6 +52,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/google.maps": "^3.66.2",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^22.20.2",
     "@types/pg": "^8.23.1",

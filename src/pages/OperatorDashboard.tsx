@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Activity,
   AlertTriangle,
   Brain,
   BusFront,
@@ -27,10 +26,15 @@ import { ApiError } from '../lib/api';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge, StatusDot } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { StatTile } from '../components/ui/StatTile';
 import { ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
 import { SectionHeading } from '../components/ui/Section';
 import { NetworkHeatmap, type HeatmapMode } from '../components/operator/NetworkHeatmap';
+import { OperatorNetworkMap } from '../components/map/OperatorNetworkMap';
+import {
+  AiActionPanel,
+  AiAlertPanel,
+  NetworkStatusPanel,
+} from '../components/operator/ControlRoomPanels';
 import { AiAlertFeed } from '../components/operator/AiAlertFeed';
 import { AiRecommendations } from '../components/operator/AiRecommendations';
 import { LiveRouteTable } from '../components/operator/LiveRouteTable';
@@ -285,57 +289,51 @@ export function OperatorDashboard() {
         </div>
       ) : null}
 
-      {/* --------------------------------------------------- 1 network overview */}
+      {/* --------------------------- 1 live map · status · AI alert · AI action */}
       <section aria-labelledby="network-overview" className="space-y-3">
         <SectionHeading
           id="network-overview"
           eyebrow="Section 1"
           title="Network overview"
-          description="Fleet, crowding and forecast headline figures for the whole simulated network."
+          description="The simulated network on Google Maps with the TransitPulse crowd layer, the fleet status beside it, and the AI's next congestion call."
           icon={Gauge}
           actions={data ? <Badge tone="neutral" size="xs">{data.routes.length} routes monitored</Badge> : undefined}
         />
 
         {!data ? (
-          <PanelSkeleton rows={3} />
+          <PanelSkeleton rows={4} />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatTile
-                label="Active routes"
-                value={data.kpis.activeRoutes}
-                unit={`of ${data.kpis.totalRoutes}`}
-                icon={BusFront}
-                accent="pulse"
-                hint={`${data.heatmap.segments.length} monitored segments · ${data.heatmap.stops.length} stops`}
+            <div className="grid gap-5 xl:grid-cols-[1.7fr_1fr]">
+              <OperatorNetworkMap
+                selectedRouteNumber={routeFilter}
+                onSelectRoute={handleSelectRoute}
               />
-              <StatTile
-                label="Active vehicles"
-                value={data.kpis.activeVehicles}
-                unit={`of ${data.kpis.totalVehicles}`}
-                icon={Activity}
-                accent="sky"
-                hint={`${data.kpis.maintenanceVehicles} in maintenance · ${data.kpis.idleVehicles} idle`}
-              />
-              <StatTile
-                label="High crowd routes"
-                value={data.kpis.highCrowdRoutes}
-                unit={`≥ ${data.crowdingThresholdPct.toFixed(0)}%`}
-                icon={AlertTriangle}
-                accent={data.kpis.highCrowdRoutes ? 'critical' : 'none'}
-                hint={`${data.kpis.watchRoutes} route(s) on watch between 70% and the threshold`}
-              />
-              <StatTile
-                label="Average network occupancy"
-                value={data.kpis.averageOccupancyPct}
-                unit="%"
-                icon={TrendingUp}
-                accent="warning"
-                hint={`Forecast +30 min: ${data.kpis.predictedOccupancyPct.toFixed(1)}%`}
-                deltaPct={Number((data.kpis.predictedOccupancyPct - data.kpis.averageOccupancyPct).toFixed(1))}
-                comparisonLabel="vs now"
-              />
+              <div className="space-y-5">
+                <NetworkStatusPanel
+                  kpis={data.kpis}
+                  thresholdPct={data.crowdingThresholdPct}
+                  isLoading={command.isLoading}
+                />
+                <AiAlertPanel
+                  decision={decision.data?.decision}
+                  isLoading={decision.isLoading}
+                  isError={decision.isError}
+                  routeLabel={decisionRoute}
+                  onRetry={() => void decision.refetch()}
+                />
+              </div>
             </div>
+
+            <AiActionPanel
+              decision={decision.data?.decision}
+              applied={applied && applied.intervention.routeNumber === decisionRoute ? applied : null}
+              conflict={focusIntervention}
+              isApplying={applyDecision.isPending}
+              errorMessage={applyError}
+              onApply={() => void handleApplyDecision()}
+              onReassess={handleReassess}
+            />
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
