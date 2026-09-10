@@ -9,9 +9,15 @@ A full-stack hackathon prototype: **React + TypeScript + Tailwind CSS** on the f
 **Express + Supabase/Postgres** on the back, with a transparent, explainable crowd
 model in between.
 
+> **DEMO / SIMULATED DATA.** The dataset describes a fictional Indian city network
+> (`Chennai City Transit (DEMO)`): Indian-style route numbers (`M1`, `21G`, `BR1`),
+> locality stops and a simulated fleet. Nothing in this repository is real transit
+> data, and the app labels it as simulated wherever data is shown.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Commuter Dashboard   Route Results   Route Details   Operator   Alerts     │
+│  Commuter   Route results   Route details   Operator   Alerts   Settings    │
+│  Data explorer (live records straight out of Postgres)                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  React 19 · TypeScript · Tailwind v4 · React Query · React Router           │
 │                          ⇅  typed /api client                               │
@@ -33,8 +39,7 @@ npm run dev          # API (:8787) + Vite dev server (:5173) together
 Open the dev server and you are on the **Commuter Dashboard**. No database
 credentials are required: the API creates an embedded PostgreSQL database in
 `.data/transitpulse`, applies the same migrations used by Supabase, and seeds a
-deterministic 14-day demo dataset (~9.5k telemetry rows, 6 lines, 16 stops, 24
-vehicles, 8 alerts, ~1k journey searches).
+deterministic 14-day demo dataset.
 
 | Script | What it does |
 | --- | --- |
@@ -42,8 +47,10 @@ vehicles, 8 alerts, ~1k journey searches).
 | `npm run dev:api` / `npm run dev:web` | Run either half on its own |
 | `npm run build` | Production frontend build |
 | `npm run typecheck` | `tsc --noEmit` across app, shared and server |
-| `npm run smoke` | Renders every route in jsdom against a running API and asserts real data |
-| `npm run db:status` | Row counts + current schema version |
+| `npm run smoke` | Renders all seven routes in jsdom against a running API and asserts database-backed content |
+| `npm run db:status` | Row counts for every table + current schema version |
+| **`npm run db:verify`** | **Executable checklist: columns, keys, indexes, constraints, seed minimums and cross-table joins** |
+| `npm run db:refresh` | Rebuild the canonical dataset from the live network model |
 | `npm run db:reset` | Re-apply the demo seed (stop the API first — see note) |
 | `npm run db:sql -- "select * from v_network_summary"` | Ad-hoc SQL |
 
@@ -56,83 +63,127 @@ vehicles, 8 alerts, ~1k journey searches).
 ```bash
 cp .env.example .env
 # Supabase dashboard → Project Settings → Database → Connection string (session pooler)
-echo 'DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres' >> .env
+# DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 npm run dev:api      # migrations + seed are applied automatically on first boot
 ```
 
-Nothing else changes: the schema, views, functions, RLS policies and seed data in
-`supabase/` are engine-agnostic, and the API reports which driver it is using at
-`GET /api/health`.
+Nothing else changes: schema, views, functions, RLS policies and seed data are
+engine-agnostic, and the API reports which driver it is using at `GET /api/health`
+(`supabase-postgres` when `DATABASE_URL` is set, `embedded-postgres` otherwise).
+
+### Credentials never reach the browser
+
+* The database connection string lives in the server-side environment only
+  (`.env`, git-ignored). Only `DATABASE_URL`, `DB_SSL`, `PGLITE_DIR`,
+  `DB_AUTO_MIGRATE`, `DB_RESET`, `PORT` and `DEFAULT_PROFILE_ID` are read.
+* The frontend calls relative `/api/...` URLs; there is no `VITE_*` database
+  variable, no Supabase key and no connection string in the bundle.
+* Row Level Security is enabled on every table: network/timetable/crowd data and
+  the published demo dataset are public read-only, rider-owned rows are private,
+  and writes go through the Express API using the service role.
 
 ---
 
-## 2. The six screens
+## 2. The database
 
-| Area | Route | What it answers |
-| --- | --- | --- |
-| **1. Commuter dashboard** | `/` | What should I do right now? Next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys with live crowd snapshots, active alerts. |
-| **2. Route results** | `/routes` | Which option should I take? Crowd-aware itineraries ranked by a tunable objective, with the busiest option called out so you can see what you avoid. |
-| **3. Route details** | `/routes/details` | Is this really the best choice? Leg-by-leg boarding plan, per-leg load, live forecast chart (measured history + prediction interval), model factor breakdown, line & stop context, trade-off scores. |
-| **4. Operator dashboard** | `/operator` | How is the network performing? Fleet state, 24-hour load profiles per line, crowding hotspots, demand signals from real searches, service KPIs, live system health. |
-| **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
-| **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
+### 2.1 Canonical dataset (the published route-level schema)
 
-Every screen is responsive: a three-column data layout on desktop, compact stacked
-cards on tablet, and a bottom-tab navigation shell on mobile.
+`supabase/migrations/0004_canonical_dataset.sql` + `0005_dataset_projection.sql`
+define the dataset a client, analyst or BI tool reads directly:
 
----
+| Requested table | Implemented as | Seed rows | Notes |
+| --- | --- | ---: | --- |
+| `routes` | **`routes`** | 6 | `id`, `route_number`, `route_name`, `origin`, `destination`, `estimated_duration_minutes`, `active`, `created_at` |
+| `stops` | **`route_stops`** (readable as `v_stops`) | 32 | The network model shares stops between routes, so the per-route ordered stop list is its own table: `id`, `route_id`, `stop_name`, `latitude`, `longitude`, `stop_order`, `created_at` |
+| `vehicles` | **`vehicle_snapshots`** (readable as `v_vehicles`) | 24 | Live snapshot per vehicle: `vehicle_number`, `route_id`, `capacity`, `current_occupancy`, `status`, `latitude`, `longitude`, `updated_at` |
+| `occupancy_predictions` | **`occupancy_predictions`** | 72 | `route_id`, `vehicle_id`, `prediction_time`, `predicted_occupancy_percentage`, `crowd_level`, `confidence_percentage` |
+| `route_options` | **`route_options`** | 24 | `travel_time_minutes`, `waiting_time_minutes`, `crowd_penalty`, `total_score` |
+| `alerts` | **`service_alerts`** (readable as `v_alerts`) | 10 | `alert_type`, `message`, `severity`, `predicted_occupancy`, `estimated_time_to_event`, `active` |
+| `users` | **`app_users`** (readable as `v_users`) | 3 | `name`, `email`, `role` ∈ `commuter · operator · admin` |
 
-## 3. Where the data comes from
+Every table has a primary key, foreign keys to `routes` (and, where relevant, to
+the network model), `CHECK` constraints on ranges and enumerations, `created_at`
+/ `updated_at` timestamps, and indexes on the columns the API and explorer sort
+and filter by. All seven are marked `DEMO DATA` in the database's own comments —
+`npm run db:verify` asserts that too.
 
-No component contains a hardcoded trip, crowding figure or KPI. The UI only ever
-renders API responses, and the API only ever reads Postgres.
+**The dataset is projected, never hand-typed.** `fn_refresh_demo_dataset()`
+rebuilds it from the live network model, telemetry and model output:
 
 ```
-src/pages/**            screens (no data fetching logic, no SQL)
-src/components/**       reusable UI + visualisation primitives
-src/hooks/**            React Query hooks — the only place screens fetch data
-src/lib/api.ts          typed API client (single fetch surface)
-        │
-server/routes/**        HTTP surface, validation (zod), status codes
-server/services/**      planner · crowd model · operator analytics · dashboard
-server/repositories/**  all SQL — one module per domain aggregate
-server/db/**            driver abstraction (Supabase Postgres ⇄ embedded) + migrations
-supabase/migrations/**  schema, derived views, SQL functions, RLS policies
-supabase/seed/**        deterministic demo dataset
-shared/**               types + crowd thresholds shared by client and server
+routes               ← lines                    + stop sequences
+route_stops          ← line_stops + stops
+vehicle_snapshots    ← vehicles + live crowd readings
+occupancy_predictions← crowd_forecasts          (worst-case load per route/time slot)
+route_options        ← routes + planner weights + live crowding
+service_alerts       ← alerts
+app_users            ← rider_profiles
 ```
 
-### Database schema (highlights)
+That means the published tables can never drift away from what the rest of the
+application is doing. Rebuild any time with `npm run db:refresh`, or from the
+Data Explorer's **Rebuild dataset** button (`POST /api/dataset/refresh`).
+
+### 2.2 Network model (what powers prediction)
 
 | Table | Purpose |
 | --- | --- |
 | `agencies`, `stops`, `lines`, `line_stops` | Network topology (GTFS-shaped) |
 | `service_patterns` | Frequency-based timetable (headway + first/last departure) |
-| `vehicles` | Fleet state, next stop, schedule adherence |
-| `crowd_observations` | Raw occupancy telemetry with a trigger that normalises day/hour buckets |
+| `vehicles` | Fleet roster, next stop, schedule adherence |
+| `crowd_observations` | Raw occupancy telemetry (~9.7k rows, 14 days) |
 | `crowd_forecasts` | Model output persisted per line/stop/target time |
-| `alerts` | Rider-facing service notices |
-| `rider_profiles`, `watchlist` | Rider preferences and saved journeys |
-| `route_searches`, `route_search_options` | Every planner run, so operator demand data is real |
+| `alerts` | Operational notice board (10 notices) |
+| `rider_profiles`, `watchlist` | Rider preferences, role and saved journeys |
+| `route_searches`, `route_search_options` | Every planner run — operator demand data is real |
 | `model_config` | Model metadata, planner weights and service targets (tunable without a deploy) |
 
-Analytical work lives in SQL so both the API and any future BI tool see the same
-numbers:
+Analytical work lives in SQL so the API and any BI tool see identical numbers:
 
-* `v_line_stop_offsets` — running travel time from each line's origin (powers ETA maths)
-* `v_line_hourly_profile`, `v_line_hourly_profile_all_stops` — 14-day learned baselines
+* `v_line_stop_offsets` — running travel time from each line's origin
+* `v_line_hourly_profile`, `v_line_hourly_profile_all_stops` — learned 14-day baselines
 * `v_latest_crowd_reading`, `v_line_crowding_now` — live occupancy per line/stop
 * `v_operator_line_load`, `v_network_summary` — operator rollups
-* `fn_next_departures(stop, from, horizon)` — expands the timetable into real departures, direction-aware
+* `fn_next_departures(stop, from, horizon)` — expands the timetable, direction-aware
 * `fn_line_segments(line, from_seq, to_seq)` — ordered stops with running ETA
 * `fn_crowd_level(ratio)` — the green/yellow/orange/red bucket used everywhere
+* `fn_refresh_demo_dataset()` — rebuilds the canonical dataset (above)
 
-**Row Level Security** is enabled on every table: network, timetable, crowd data
-and alerts are public read-only; rider profile, watchlist and search history are
-scoped to `auth.uid()`. Server-side writes use the owner/service role, and a
-compatibility shim in `0000_supabase_compat.sql` creates the Supabase `auth`
-schema and roles only when they are missing — so the same migrations run on
-Supabase and on the embedded demo database.
+Timetable, telemetry and saved journeys are all evaluated in the **agency
+timezone** (`Asia/Kolkata` for the demo), so a saved 08:15 departure means 08:15
+where the rider is, and the learned demand curve lines up with the local clock.
+
+### 2.3 Verify it yourself
+
+```bash
+npm run db:verify
+```
+
+```
+[db] verification — 43/43 checks passed
+  ✓ columns routes — 8 columns            ✓ foreign keys vehicle_snapshots — 2 fk
+  ✓ primary key routes                    ✓ indexes occupancy_predictions — 6 index(es)
+  ✓ routes ≥ 6 rows — 6 rows              ✓ all three roles present — admin, commuter, operator
+  ✓ occupancy_predictions ≥ 30 rows …     ✓ joined route/stop/vehicle/prediction query — 5 rows
+  ✓ view v_stops — 32 rows …              ✓ tables marked as DEMO DATA — 7/7
+```
+
+---
+
+## 3. The screens
+
+| Area | Route | What it answers |
+| --- | --- | --- |
+| **1. Commuter dashboard** | `/` | What should I do right now? Next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys with live crowd snapshots, active alerts. |
+| **2. Route results** | `/routes` | Which option should I take? Crowd-aware itineraries ranked by a tunable objective, with the busiest option called out so you can see what you avoid. |
+| **3. Route details** | `/routes/details` | Is this really the best choice? Leg-by-leg boarding plan, per-leg load, forecast chart, model factor breakdown, trade-off scores. |
+| **4. Operator dashboard** | `/operator` | How is the network performing? Fleet state, 24-hour load profiles, crowding hotspots, demand signals from real searches, service KPIs, system health. |
+| **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
+| **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
+| **7. Data explorer** | `/database` | What does the database actually contain? Live row counts, columns, primary/foreign keys and paginated records for every canonical table, straight from Postgres. |
+
+Every screen is responsive: three-column data layouts on desktop, stacked cards on
+tablet, and a bottom-tab navigation shell on mobile.
 
 ---
 
@@ -141,9 +192,8 @@ Supabase and on the embedded demo database.
 `server/services/crowd-model.ts` blends four signals and returns both the number
 and the reason for it:
 
-1. **Learned baseline** — the 14-day hourly mean *and* 90th percentile of
-   `crowd_observations` for that exact line/stop/day-type/hour cell, interpolated
-   smoothly across the hour boundary.
+1. **Learned baseline** — the 14-day hourly mean *and* 90th percentile for that
+   line/stop/day-type/hour cell, interpolated across the hour boundary.
 2. **Service pressure** — short headways bunch passengers onto fewer vehicles.
 3. **Live context** — active crowding alerts and upstream load carried down the line.
 4. **Confidence** — degrades with horizon and with thin history.
@@ -158,23 +208,17 @@ what the **Model breakdown** tab renders. Forecasts are written back into
 
 1. **Enumerate** feasible ride sequences through the network graph (respecting the
    rider's transfer budget, including walking transfers between nearby stops).
-2. **Schedule** each sequence against the real timetable by asking the database for
-   the next departures at every boarding stop — direction-aware, so inbound and
-   outbound services do not collapse into the same timestamp.
-3. **Predict** occupancy for every leg at the exact minute the rider would be on
-   board, including peak load along the leg.
+2. **Schedule** each sequence against the real timetable — direction-aware.
+3. **Predict** occupancy for every leg at the exact minute the rider is on board.
 4. **Score** with weights from `model_config.planner_weights`:
 
    ```
    score = time·1.0 + crowdPenalty(load)·crowd·toleranceScale + transfers·4.5 + walk·1.6
    ```
 
-   `crowdPenalty` grows super-linearly past 80 % occupancy, so "busy but fine" stays
-   cheap while crush loads are punished.
-5. **Label and explain**: the winner becomes `Recommended`, and the remaining slots
-   go to the itineraries that win on time, crowding and changes. Insights are
-   generated from the data — including the *Optimize* nudge ("leaving 3 minutes
-   later is ~11 points quieter on M1").
+5. **Label and explain**: the winner becomes `Recommended`, the remaining slots go
+   to the itineraries that win on time, crowding and changes, and insights are
+   generated from the data — including the *Optimize* nudge.
 
 Each run is persisted to `route_searches` / `route_search_options`, which is why
 the operator dashboard's demand panel and "crowding avoided by routing" KPI are
@@ -182,28 +226,11 @@ real aggregates rather than illustrative numbers.
 
 ---
 
-## 5. Design direction
-
-* **Dark transportation-tech shell** — layered radial gradients, subtle grid, glass
-  panels (`glass`, `glass-strong`) used only where depth communicates hierarchy.
-* **One colour language** — green → yellow → orange → red crowd scale defined once
-  in `shared/crowd.ts` and mirrored in `src/index.css` theme tokens, so a colour
-  always means the same occupancy band across charts, meters and badges.
-* **Data visualisation without a chart library** — the forecast chart, sparklines
-  and hourly load profiles are hand-built SVG/CSS, keeping the bundle small and the
-  styling consistent.
-* **Motion with restraint** — one-shot rise-in on cards, a pulsing "live" dot, and
-  hover/active feedback. `prefers-reduced-motion` is respected globally.
-* **Typography** — Space Grotesk for display numerals and headings, Inter for body,
-  JetBrains Mono for times, ratios and IDs.
-
----
-
-## 6. API reference
+## 5. API reference
 
 | Method | Endpoint | Returns |
 | --- | --- | --- |
-| `GET` | `/api/health` | Driver, schema version, latency, row counts, model version |
+| `GET` | `/api/health` | Driver, schema version, latency, row counts (network + canonical dataset), model version |
 | `GET` | `/api/network` | Agency, stops, lines, model metadata |
 | `GET` | `/api/stops`, `/api/stops/:id` | Stop search and live departure board with predictions |
 | `GET` | `/api/lines`, `/api/lines/:id` | Line metadata / stop sequence + active alerts |
@@ -216,28 +243,58 @@ real aggregates rather than illustrative numbers.
 | `GET\|POST` | `/api/watchlist` (`/:id`, `/:id/toggle`) | Saved journeys |
 | `GET` | `/api/dashboard` | The commuter dashboard payload |
 | `GET` | `/api/settings/options` | Stops, modes and languages for Settings |
+| `GET` | `/api/dataset/tables` | Every canonical table with live row counts and the requested-name mapping |
+| `GET` | `/api/dataset/tables/:table` | Paginated records (`limit`, `offset`, `orderBy`, `direction`) |
+| `GET` | `/api/dataset/schema/:table` | Column definitions, types, keys and foreign-key targets |
+| `POST` | `/api/dataset/refresh` | Rebuild the canonical dataset from the network model |
+
+Table and column names are validated against a server-side whitelist plus
+`information_schema`, so nothing user-supplied is ever interpolated into SQL:
+
+```
+$ curl "localhost:8787/api/dataset/tables/routes?orderBy=id;drop%20table%20routes"
+400 {"error":{"message":"Unknown or unsortable column: id;drop","code":"DATASET_BAD_COLUMN"}}
+```
 
 Errors always come back as `{ "error": { "message", "code", "details?" } }`.
 
 ---
 
+## 6. Design direction
+
+* **Dark transportation-tech shell** — layered radial gradients, subtle grid, glass
+  panels used only where depth communicates hierarchy.
+* **One colour language** — green → yellow → orange → red crowd scale defined once
+  in `shared/crowd.ts` and mirrored in `src/index.css` theme tokens.
+* **Data visualisation without a chart library** — forecast chart, sparklines and
+  hourly load profiles are hand-built SVG/CSS.
+* **Motion with restraint** — one-shot rise-in on cards, a pulsing "live" dot,
+  hover/active feedback; `prefers-reduced-motion` is respected globally.
+* **Typography** — Space Grotesk for display numerals, Inter for body, JetBrains
+  Mono for times, ratios, IDs and table cells.
+
+---
+
 ## 7. Demo script (3 minutes)
 
-1. **Dashboard** — point out the recommended departure, "crowding avoided", the live
-   network pressure list and the departure boards showing a *predicted* load per
-   service (`crowd_forecasts` written by the model).
-2. **Plan a journey** — set `Greenfield → Tech Park North`, leave the routing option
-   "Minimise crowding" on, and search.
+1. **Dashboard** — point out the recommended departure for the rider's next saved
+   journey, "crowding avoided", live network pressure and departure boards showing
+   a *predicted* load per service.
+2. **Plan a journey** — `Tambaram → Tidel Park`, leave "Minimise crowding" on, search.
 3. **Route results** — the recommended option is compared with the busiest itinerary
-   on the corridor; the insight rail explains how much crowding was avoided and
-   suggests a better departure time. Tap **Leave in 15 minutes** to re-plan and watch
-   the numbers change.
+   on the corridor; the insight rail explains how much crowding was avoided. Tap a
+   re-plan shortcut and watch the numbers change.
 4. **Route details** — walk through the boarding plan, the forecast chart (measured
-   history → predicted band), and the model breakdown that shows *why*.
-5. **Operator** — fleet state, the 24-hour load profile showing both peaks, hotspots,
+   history → predicted band) and the model breakdown that shows *why*.
+5. **Operator** — fleet state, the 24-hour load profile with both peaks, hotspots,
    and the demand panel proving riders are choosing quieter trips.
-6. **Alerts** — publish a crowding notice; it appears instantly for riders.
-7. **Settings** — drag crowd tolerance down and re-plan: the planner penalises busy
+6. **Alerts** — publish a crowding notice; it appears instantly for riders, and it
+   lands in the `alerts` table (and in `service_alerts` after a dataset refresh).
+7. **Database** — open the Data Explorer: real row counts, primary/foreign keys and
+   records for `routes`, `route_stops`, `vehicle_snapshots`,
+   `occupancy_predictions`, `route_options`, `service_alerts` and `app_users` — then
+   press **Rebuild dataset** and show the counts recomputed from the model.
+8. **Settings** — drag crowd tolerance down and re-plan: the planner penalises busy
    carriages harder.
 
 ---
@@ -250,8 +307,8 @@ these are intentionally left for the next iteration:
 
 * **Authentication** — rider identity is a demo profile; Supabase Auth + the
   existing `auth_user_id` column and RLS policies are the intended path.
-* **Live vehicle positions** — `vehicles.last_ping`/`next_stop_id` are seeded; a
-  GTFS-Realtime feed would replace the seeded fleet state.
+* **Live vehicle positions** — `vehicles.next_stop_id` and `vehicle_snapshots` are
+  seeded; a GTFS-Realtime feed would replace the simulated fleet state.
 * **Model training** — the crowd model is a transparent statistical blend rather
   than a trained network, which keeps the demo explainable and dependency-free.
 * **Push delivery** — notification preferences are stored and rendered; an actual

@@ -6,6 +6,7 @@ import { RouteDetails } from './pages/RouteDetails';
 import { OperatorDashboard } from './pages/OperatorDashboard';
 import { AlertsPage } from './pages/AlertsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { DataExplorerPage } from './pages/DataExplorerPage';
 import { EmptyState } from './components/ui/Skeleton';
 import { Button } from './components/ui/Button';
 import { Compass } from 'lucide-react';
@@ -36,6 +37,7 @@ function NotFound() {
  *   /operator               Operator dashboard
  *   /alerts                 Alerts feed + publishing
  *   /settings               Rider preferences and saved journeys
+ *   /database               Data explorer — live records from Postgres
  */
 export function App() {
   return (
@@ -47,6 +49,7 @@ export function App() {
         <Route path="operator" element={<OperatorDashboard />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="database" element={<DataExplorerPage />} />
         <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
       </Route>

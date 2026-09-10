@@ -24,6 +24,41 @@ export function setActiveProfileId(profileId: string): void {
   window.localStorage.setItem(DEMO_PROFILE_KEY, profileId);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Canonical demo dataset (Data Explorer)                                     */
+/* -------------------------------------------------------------------------- */
+
+export function useDatasetTables() {
+  return useQuery({
+    queryKey: queryKeys.datasetTables,
+    queryFn: api.datasetTables,
+    staleTime: 30_000,
+  });
+}
+
+export function useDatasetRows(
+  table: string,
+  params: { limit?: number; offset?: number; orderBy?: string; direction?: 'asc' | 'desc' } = {},
+) {
+  return useQuery({
+    queryKey: queryKeys.datasetRows(table, params),
+    queryFn: () => api.datasetRows(table, params),
+    enabled: Boolean(table),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useRefreshDataset() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.datasetRefresh(),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['dataset'] });
+      void client.invalidateQueries({ queryKey: queryKeys.health });
+    },
+  });
+}
+
 export function useHealth() {
   return useQuery({
     queryKey: queryKeys.health,

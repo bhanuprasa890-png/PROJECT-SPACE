@@ -1,6 +1,8 @@
 import type {
   Alert,
   AlertStatus,
+  DatasetOverview,
+  DatasetTablePage,
   CommuterDashboard,
   CrowdForecastPoint,
   CrowdHotspot,
@@ -89,10 +91,39 @@ const query = (params: Record<string, string | number | boolean | undefined | nu
 export interface HealthPayload extends HealthReport {
   uptimeSeconds: number;
   defaults: { profileId: string };
+  dataClassification?: 'demo-simulated';
+  dataset?: { name: string; requestedAs: string; rows: number }[];
 }
 
 export const api = {
   health: () => request<HealthPayload>('/health'),
+
+  /* ------------------------------------------------- canonical demo dataset */
+
+  /**
+   * The published route-level dataset (routes, stops, vehicles, predictions,
+   * options, alerts, users). Read straight from Postgres through the API — the
+   * browser never holds database credentials.
+   */
+  datasetTables: () => request<DatasetOverview>('/dataset/tables'),
+
+  datasetRows: (
+    table: string,
+    params: { limit?: number; offset?: number; orderBy?: string; direction?: 'asc' | 'desc' } = {},
+  ) =>
+    request<DatasetTablePage>(
+      `/dataset/tables/${encodeURIComponent(table)}${query({
+        limit: params.limit,
+        offset: params.offset,
+        orderBy: params.orderBy,
+        direction: params.direction,
+      })}`,
+    ),
+
+  datasetRefresh: () =>
+    request<{ refreshedAt: string; counts: Record<string, number> }>('/dataset/refresh', {
+      method: 'POST',
+    }),
 
   network: () =>
     request<{

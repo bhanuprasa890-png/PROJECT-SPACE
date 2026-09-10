@@ -65,22 +65,22 @@ const ROUTES = [
   {
     path: '/',
     name: 'Commuter dashboard',
-    expect: ['Commuter Dashboard', 'Busiest right now', 'Saved journeys', 'Greenfield', 'Network pressure'],
+    expect: ['Commuter Dashboard', 'Busiest right now', 'Saved journeys', 'Tambaram', 'Network pressure'],
   },
   {
     path: '/routes?origin=STN-12&destination=STN-04&avoidCrowding=true&maxTransfers=1',
     name: 'Route results',
-    expect: ['crowd-aware option', 'Why this recommendation', 'Greenfield', 'Peak', 'Crowding scale'],
+    expect: ['crowd-aware option', 'Why this recommendation', 'Tambaram', 'Peak', 'Crowding scale'],
   },
   {
     path: '/routes/details?origin=STN-12&destination=STN-04&lineId=LN-B12&stopId=STN-12',
     name: 'Route details',
-    expect: ['Boarding plan', 'Crowd forecast', 'Model breakdown', 'Greenfield'],
+    expect: ['Boarding plan', 'Crowd forecast', 'Model breakdown', 'Tambaram'],
   },
   {
     path: '/operator',
     name: 'Operator dashboard',
-    expect: ['Line load profile', 'System health', 'Red Line', 'Crosstown 12'],
+    expect: ['Line load profile', 'System health', 'Metro Line 1', 'MTC 21G'],
   },
   {
     path: '/alerts',
@@ -90,7 +90,23 @@ const ROUTES = [
   {
     path: '/settings',
     name: 'Settings',
-    expect: ['Routing preferences', 'Saved journeys', 'Ava Chen'],
+    expect: ['Routing preferences', 'Saved journeys', 'Ananya Raman'],
+  },
+  {
+    // Data Explorer — proves the canonical Postgres dataset is readable from the
+    // frontend (table names, record counts and real rows come from the database).
+    path: '/database',
+    name: 'Data explorer',
+    expect: [
+      'Supabase Postgres',
+      'occupancy_predictions',
+      'route_stops',
+      'vehicle_snapshots',
+      'service_alerts',
+      'Row level security',
+      'simulated data',
+      'Metro Line 1',
+    ],
   },
 ];
 
@@ -114,7 +130,8 @@ try {
   const api = await nativeFetch(`${API_ORIGIN}/api/health`).then((response) => response.json());
   console.log(
     `[smoke] API ok · ${api.database.driver} · schema ${api.database.schemaVersion} · ` +
-      `${api.database.rows.observation_count} observations`,
+      `${api.database.rows.observation_count} observations · ` +
+      `${api.database.rows.routes ?? 0} routes · ${api.database.rows.occupancy_predictions ?? 0} predictions`,
   );
 
   const { renderRoute } = await vite.ssrLoadModule('/src/smoke/entry.tsx');

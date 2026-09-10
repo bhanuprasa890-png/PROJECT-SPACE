@@ -482,6 +482,58 @@ export interface CommuterDashboard {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Canonical demo dataset (Data Explorer)                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface DatasetTableSummary {
+  name: string;
+  label: string;
+  kind: 'table' | 'view';
+  /** Table name in the requested canonical schema (see shared/dataset.ts). */
+  requestedAs: string;
+  description: string;
+  rowCount: number;
+  columnCount: number;
+  primaryKey: string;
+  /** Minimum row count the demo dataset guarantees, when one is defined. */
+  minimumRows?: number;
+}
+
+export interface DatasetColumn {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  defaultValue: string | null;
+  isPrimaryKey: boolean;
+  references: string | null;
+}
+
+export interface DatasetTablePage {
+  table: DatasetTableSummary;
+  columns: DatasetColumn[];
+  rows: Record<string, string | number | boolean | null>[];
+  total: number;
+  limit: number;
+  offset: number;
+  orderBy: string;
+  generatedAt: string;
+}
+
+export interface DatasetOverview {
+  driver: 'supabase-postgres' | 'embedded-postgres';
+  schemaVersion: string | null;
+  source: 'supabase-postgres' | 'embedded-postgres';
+  dataClassification: 'demo-simulated';
+  generatedAt: string;
+  tables: DatasetTableSummary[];
+  totals: {
+    tables: number;
+    views: number;
+    rows: number;
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Transport envelope                                                         */
 /* -------------------------------------------------------------------------- */
 

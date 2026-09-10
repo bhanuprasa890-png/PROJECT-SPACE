@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   Bell,
+  Database,
   Gauge,
   LayoutDashboard,
   Menu,
@@ -15,6 +16,7 @@ import { cn } from '../../lib/utils';
 import { useHealth } from '../../hooks/useTransitData';
 import { LivePill } from '../crowd/CrowdHotspotList';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
 
 interface NavItem {
   to: string;
@@ -30,6 +32,7 @@ const PRIMARY_NAV: NavItem[] = [
   { to: '/operator', label: 'Operator', description: 'Control room', icon: Gauge },
   { to: '/alerts', label: 'Alerts', description: 'Service notices', icon: Bell },
   { to: '/settings', label: 'Settings', description: 'Preferences', icon: SettingsIcon },
+  { to: '/database', label: 'Database', description: 'Data explorer', icon: Database },
 ];
 
 const PAGE_META: Record<string, { title: string; subtitle: string }> = {
@@ -57,6 +60,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'Settings',
     subtitle: 'Routing preferences, crowd tolerance and saved journeys',
   },
+  '/database': {
+    title: 'Data Explorer',
+    subtitle: 'Live records from the Postgres dataset behind every screen',
+  },
 };
 
 function Logo() {
@@ -70,7 +77,7 @@ function Logo() {
         <p className="font-display text-base font-semibold tracking-tight text-mist-100">
           Transit<span className="text-pulse-300">Pulse</span>
         </p>
-        <p className="text-[0.65rem] tracking-[0.18em] text-mist-500 uppercase">AI · Meridian</p>
+        <p className="text-[0.65rem] tracking-[0.18em] text-mist-500 uppercase">AI · Chennai</p>
       </div>
     </div>
   );
@@ -129,8 +136,8 @@ function DatabaseBadge() {
             : 'Postgres (embedded)'}
         </p>
         <p className="text-[0.62rem] text-mist-500">
-          {data.database.rows.observation_count ?? 0} telemetry rows ·{' '}
-          {data.database.latencyMs.toFixed(0)} ms
+          {data.database.rows.routes ?? 0} routes · {data.database.rows.occupancy_predictions ?? 0}{' '}
+          predictions · {data.database.latencyMs.toFixed(0)} ms
         </p>
       </>
     );
@@ -175,6 +182,11 @@ export function AppShell() {
             <NavList />
           </div>
           <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Badge tone="neutral" size="sm">
+                Demo · simulated data
+              </Badge>
+            </div>
             <DatabaseBadge />
             <p className="px-1 text-[0.62rem] leading-relaxed text-mist-600">
               Predict → Avoid → Optimize. Crowd forecasts are generated from{' '}

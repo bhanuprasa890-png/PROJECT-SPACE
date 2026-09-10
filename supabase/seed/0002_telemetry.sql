@@ -7,6 +7,10 @@
 -- forward forecast grid written by the (simulated) crowd model.
 --
 -- Everything is deterministic: pseudo-randomness comes from md5 of the row key.
+--
+-- DEMO / SIMULATED DATA: the history below is generated, not measured. Hour
+-- buckets are local hours in the agency timezone, so the learned baselines line
+-- up with the timetable and with wall-clock time for the demo audience.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -55,7 +59,10 @@ insert into crowd_observations (
   line_id, stop_id, observed_at, day_type, hour_of_day,
   onboard_count, capacity, occupancy_ratio, source
 )
-with grid as (
+with tz as (
+  select timezone as zone from agencies order by id limit 1
+),
+grid as (
   select
     l.id                                        as line_id,
     o.stop_id,
@@ -64,16 +71,25 @@ with grid as (
     l.code                                      as line_code,
     s.is_interchange,
     s.daily_boardings,
-    (date_trunc('day', now()) - make_interval(days => d.days) + make_interval(hours => h.hour)) as observed_at,
+    -- Wall-clock local time in the agency timezone, then converted back to an
+    -- absolute instant: hour_of_day always matches the local hour of observed_at.
+    (date_trunc('day', now() at time zone tz.zone)
+      - make_interval(days => d.days)
+      + make_interval(hours => h.hour))         as local_ts,
     h.hour                                      as hour_of_day,
-    extract(isodow from (date_trunc('day', now()) - make_interval(days => d.days))) in (6, 7) as weekend
+    extract(isodow from (date_trunc('day', now() at time zone tz.zone)
+      - make_interval(days => d.days))) in (6, 7) as weekend,
+    tz.zone                                     as zone
   from lines l
   join v_line_stop_offsets o on o.line_id = l.id
   join stops s on s.id = o.stop_id
+  cross join tz
   cross join generate_series(0, 14) as d(days)
   cross join generate_series(5, 23) as h(hour)
-  where (date_trunc('day', now()) - make_interval(days => d.days) + make_interval(hours => h.hour))
-        < now() - interval '6 minutes'
+  where (date_trunc('day', now() at time zone tz.zone)
+      - make_interval(days => d.days)
+      + make_interval(hours => h.hour)) at time zone tz.zone
+      < now() - interval '6 minutes'
 ),
 scored as (
   select
@@ -87,16 +103,16 @@ scored as (
     * (0.82 + 0.36 * (g.daily_boardings::numeric / 48200.0))
     * (case g.mode when 'bus' then 1.08 when 'brt' then 1.02 when 'tram' then 0.95
                    when 'ferry' then 0.88 else 1.0 end)
-    * (0.88 + 0.24 * fn_seed_noise(g.line_id || g.stop_id || g.observed_at::text))
+    * (0.88 + 0.24 * fn_seed_noise(g.line_id || g.stop_id || g.local_ts::text))
       as raw_ratio,
-    fn_seed_noise('src' || g.line_id || g.stop_id || g.observed_at::text) as source_roll
+    fn_seed_noise('src' || g.line_id || g.stop_id || g.local_ts::text) as source_roll
   from grid g
 )
 select
   line_id,
   stop_id,
-  observed_at,
-  case when weekend then 'saturday' else 'weekday' end,
+  local_ts at time zone zone,
+  case when extract(isodow from local_ts) in (6, 7) then 'saturday' else 'weekday' end,
   hour_of_day::smallint,
   greatest(1, round(greatest(0.06, least(1.32, raw_ratio)) * capacity))::integer,
   capacity,
@@ -116,7 +132,10 @@ insert into crowd_observations (
   line_id, stop_id, observed_at, day_type, hour_of_day,
   onboard_count, capacity, occupancy_ratio, source
 )
-with grid as (
+with tz as (
+  select timezone as zone from agencies order by id limit 1
+),
+grid as (
   select
     l.id                                   as line_id,
     o.stop_id,
@@ -125,11 +144,12 @@ with grid as (
     s.is_interchange,
     s.daily_boardings,
     date_trunc('minute', now()) - make_interval(mins => k.steps * 10) as observed_at,
-    extract(hour from (now() - make_interval(mins => k.steps * 10)))::integer as hour_of_day,
-    extract(isodow from now()) in (6, 7) as weekend
+    extract(hour from (now() - make_interval(mins => k.steps * 10)) at time zone tz.zone)::integer as hour_of_day,
+    extract(isodow from (now() at time zone tz.zone)) in (6, 7) as weekend
   from lines l
   join v_line_stop_offsets o on o.line_id = l.id
   join stops s on s.id = o.stop_id
+  cross join tz
   cross join generate_series(0, 19) as k(steps)
 ),
 scored as (
@@ -165,7 +185,10 @@ insert into crowd_forecasts (
   line_id, stop_id, target_at, horizon_minutes, predicted_ratio, predicted_headcount,
   lower_ratio, upper_ratio, confidence, model_version, factors
 )
-with grid as (
+with tz as (
+  select timezone as zone from agencies order by id limit 1
+),
+grid as (
   select
     l.id                              as line_id,
     o.stop_id,
@@ -176,11 +199,12 @@ with grid as (
     l.code                            as line_code,
     date_trunc('minute', now()) + make_interval(mins => k.steps * 15) as target_at,
     k.steps * 15                      as horizon_minutes,
-    extract(hour from (now() + make_interval(mins => k.steps * 15)))::integer as hour_of_day,
-    extract(isodow from (now() + make_interval(mins => k.steps * 15))) in (6, 7) as weekend
+    extract(hour from (now() + make_interval(mins => k.steps * 15)) at time zone tz.zone)::integer as hour_of_day,
+    extract(isodow from (now() at time zone tz.zone)) in (6, 7) as weekend
   from lines l
   join v_line_stop_offsets o on o.line_id = l.id
   join stops s on s.id = o.stop_id
+  cross join tz
   cross join generate_series(1, 12) as k(steps)
 ),
 scored as (

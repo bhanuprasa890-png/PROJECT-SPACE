@@ -1,9 +1,16 @@
 -- =============================================================================
 -- TransitPulse AI · seed 0001 · Network topology
 -- =============================================================================
--- A deterministic, self-consistent demo network for "Meridian City":
---   · 1 agency, 16 stops (5 interchanges), 6 lines across 5 modes
---   · Frequency-based timetable + 18 in-service vehicles
+-- DEMO / SIMULATED DATA — not a real transit network.
+--
+-- A deterministic, self-consistent demo network modelled on an Indian city
+-- corridor: 1 agency, 16 stops (5 interchanges), 6 routes across 5 modes,
+-- Indian-style route numbering (M1, M2, 21G, T4, BR1, F2) and locality names.
+-- Stop coordinates form a *simulated* grid over the city region — they are
+-- illustrative, not surveyed positions.
+--
+--   · 16 stops (5 interchanges) and 6 lines across 5 modes
+--   · Frequency-based timetable + 24 vehicles (18 in service)
 --   · Model/planner configuration rows consumed by the API layer
 --
 -- The loader is idempotent: it truncates and reloads the demo dataset.
@@ -13,66 +20,72 @@ truncate table route_search_options, route_searches, watchlist, rider_profiles,
   crowd_forecasts, crowd_observations, vehicles, service_patterns, line_stops,
   lines, stops, alerts, agencies, model_config restart identity cascade;
 
+-- The canonical demo dataset (routes, route_stops, vehicle_snapshots,
+-- occupancy_predictions, route_options, service_alerts, app_users) references
+-- the tables above, so it is cleared here and rebuilt by seed 0004.
+truncate table occupancy_predictions, route_options, service_alerts,
+  vehicle_snapshots, route_stops, routes, app_users cascade;
+
 -- -----------------------------------------------------------------------------
 -- Agency
 -- -----------------------------------------------------------------------------
 insert into agencies (id, name, city, timezone) values
-  ('AG-MERIDIAN', 'Meridian Metro Authority', 'Meridian City', 'UTC');
+  ('AG-MERIDIAN', 'Chennai City Transit (DEMO)', 'Chennai', 'Asia/Kolkata');
 
 -- -----------------------------------------------------------------------------
 -- Stops — interchange hubs carry the highest boarding volume
 -- -----------------------------------------------------------------------------
 insert into stops (id, agency_id, code, name, description, lat, lng, zone, is_interchange, daily_boardings) values
-  ('STN-01', 'AG-MERIDIAN', 'CEX', 'Central Exchange',    'Primary downtown interchange and bus concourse.', 12.9716, 77.5946, 'Zone A', true,  48200),
-  ('STN-02', 'AG-MERIDIAN', 'MJC', 'Meridian Junction',   'Northern rail + metro interchange.',              12.9960, 77.5946, 'Zone B', true,  31400),
-  ('STN-03', 'AG-MERIDIAN', 'HBG', 'Harbour Gate',        'Harbour district terminus and ferry pier.',       12.9600, 77.6796, 'Zone C', true,  22600),
-  ('STN-04', 'AG-MERIDIAN', 'TPN', 'Tech Park North',     'Technology corridor, campus shuttle hub.',        13.0060, 77.6096, 'Zone B', false, 19800),
-  ('STN-05', 'AG-MERIDIAN', 'TPS', 'Tech Park South',     'Southern technology campus entrance.',            12.9910, 77.6196, 'Zone B', false, 15600),
-  ('STN-06', 'AG-MERIDIAN', 'RVS', 'Riverside',           'Riverside promenade and riverside apartments.',   12.9766, 77.5646, 'Zone A', false, 12300),
-  ('STN-07', 'AG-MERIDIAN', 'OTW', 'Old Town',            'Heritage quarter, weekend markets.',              12.9836, 77.5726, 'Zone A', false, 14100),
-  ('STN-08', 'AG-MERIDIAN', 'MKS', 'Market Square',       'Retail core, major bus-to-metro interchange.',    12.9696, 77.5736, 'Zone A', true,  36700),
-  ('STN-09', 'AG-MERIDIAN', 'UNI', 'University',          'University campus and student quarter.',          12.9646, 77.6146, 'Zone C', true,  27900),
-  ('STN-10', 'AG-MERIDIAN', 'STD', 'Stadium',             'Stadium and events district.',                    12.9806, 77.6196, 'Zone C', false, 16400),
-  ('STN-11', 'AG-MERIDIAN', 'APR', 'Airport Road',        'Airport approach, long-stay parking.',            12.9910, 77.6596, 'Zone D', false, 18900),
-  ('STN-12', 'AG-MERIDIAN', 'GRF', 'Greenfield',          'Western suburbs, park and ride.',                 12.9576, 77.5496, 'Zone E', false,  9800),
-  ('STN-13', 'AG-MERIDIAN', 'NGT', 'Northgate',           'Northern residential growth corridor.',           13.0196, 77.6196, 'Zone D', false, 11200),
-  ('STN-14', 'AG-MERIDIAN', 'LKV', 'Lakeview',            'Lakeside residential district.',                  12.9506, 77.5646, 'Zone E', false,  8700),
-  ('STN-15', 'AG-MERIDIAN', 'HSP', 'Hospital District',   'Regional hospital and medical campus.',           12.9456, 77.5846, 'Zone E', false, 13500),
-  ('STN-16', 'AG-MERIDIAN', 'FRT', 'Ferry Terminal',      'Cross-harbour ferry terminal.',                   12.9486, 77.6996, 'Zone D', false,  7600);
+  ('STN-01', 'AG-MERIDIAN', 'CEN', 'Chennai Central',  'Downtown interchange, suburban rail terminus and city bus hub.', 13.1216, 80.1946, 'Zone A', true,  48200),
+  ('STN-02', 'AG-MERIDIAN', 'EGM', 'Egmore Junction',  'Rail and metro interchange serving the museum quarter.',         13.1460, 80.1946, 'Zone B', true,  31400),
+  ('STN-03', 'AG-MERIDIAN', 'PRT', 'Chennai Port',     'Harbour district terminus and ferry pier.',                      13.1100, 80.2796, 'Zone C', true,  22600),
+  ('STN-04', 'AG-MERIDIAN', 'TDL', 'Tidel Park',       'IT corridor, campus shuttle hub.',                               13.1560, 80.2096, 'Zone B', false, 19800),
+  ('STN-05', 'AG-MERIDIAN', 'PER', 'Perungudi',        'Southern IT corridor entrance.',                                 13.1410, 80.2196, 'Zone B', false, 15600),
+  ('STN-06', 'AG-MERIDIAN', 'ADY', 'Adyar',            'Riverfront promenade and riverside apartments.',                 13.1266, 80.1646, 'Zone A', false, 12300),
+  ('STN-07', 'AG-MERIDIAN', 'MYP', 'Mylapore',         'Heritage temple quarter, weekend markets.',                      13.1336, 80.1726, 'Zone A', false, 14100),
+  ('STN-08', 'AG-MERIDIAN', 'TNG', 'T. Nagar',         'Retail core, major bus-to-metro interchange.',                   13.1196, 80.1736, 'Zone A', true,  36700),
+  ('STN-09', 'AG-MERIDIAN', 'ANU', 'Anna University',  'University campus and student quarter.',                         13.1146, 80.2146, 'Zone C', true,  27900),
+  ('STN-10', 'AG-MERIDIAN', 'CHP', 'Chepauk',          'Cricket stadium and events district.',                           13.1306, 80.2196, 'Zone C', false, 16400),
+  ('STN-11', 'AG-MERIDIAN', 'AIR', 'Chennai Airport',  'Airport approach, long-stay parking.',                           13.1410, 80.2596, 'Zone D', false, 18900),
+  ('STN-12', 'AG-MERIDIAN', 'TBM', 'Tambaram',         'Southern suburban terminus, park and ride.',                     13.1076, 80.1496, 'Zone E', false,  9800),
+  ('STN-13', 'AG-MERIDIAN', 'MDV', 'Madhavaram',       'Northern residential growth corridor.',                          13.1696, 80.2196, 'Zone D', false, 11200),
+  ('STN-14', 'AG-MERIDIAN', 'VLR', 'Velachery',        'Lakeside residential district.',                                 13.1006, 80.1646, 'Zone E', false,  8700),
+  ('STN-15', 'AG-MERIDIAN', 'KLP', 'Kilpauk',          'Medical campus district.',                                       13.0956, 80.1846, 'Zone E', false, 13500),
+  ('STN-16', 'AG-MERIDIAN', 'ENR', 'Ennore Ferry Terminal', 'Cross-harbour ferry terminal.',                            13.0986, 80.2996, 'Zone D', false,  7600);
 
 -- -----------------------------------------------------------------------------
--- Lines
+-- Lines (Indian-style route numbers)
 -- -----------------------------------------------------------------------------
 insert into lines (id, agency_id, code, name, mode, color, capacity_per_vehicle, headway_minutes, is_active) values
-  ('LN-M1', 'AG-MERIDIAN', 'M1',  'Red Line',            'metro', '#fb7185', 320, 4,  true),
-  ('LN-M2', 'AG-MERIDIAN', 'M2',  'Blue Line',           'metro', '#38bdf8', 320, 5,  true),
-  ('LN-B12','AG-MERIDIAN', 'B12', 'Crosstown 12',        'bus',   '#facc15',  86, 10, true),
-  ('LN-T4', 'AG-MERIDIAN', 'T4',  'Riverside Tram',      'tram',  '#a78bfa', 180,  7, true),
-  ('LN-BR1','AG-MERIDIAN', 'BR1', 'Harbour Express BRT', 'brt',   '#34d399', 110,  6, true),
-  ('LN-F2', 'AG-MERIDIAN', 'F2',  'Harbour Ferry',       'ferry', '#22d3ee', 240, 20, true);
+  ('LN-M1', 'AG-MERIDIAN', 'M1',  'Metro Line 1 · Central – Madhavaram', 'metro', '#fb7185', 320, 4,  true),
+  ('LN-M2', 'AG-MERIDIAN', 'M2',  'Metro Line 2 · Port – Airport',       'metro', '#38bdf8', 320, 5,  true),
+  ('LN-B12','AG-MERIDIAN', '21G', 'MTC 21G · Tambaram – Kilpauk',        'bus',   '#facc15',  86, 10, true),
+  ('LN-T4', 'AG-MERIDIAN', 'T4',  'Heritage Tram T4 · Ennore – Chepauk', 'tram',  '#a78bfa', 180,  7, true),
+  ('LN-BR1','AG-MERIDIAN', 'BR1', 'BRT Corridor 1 · Airport – Central',  'brt',   '#34d399', 110,  6, true),
+  ('LN-F2', 'AG-MERIDIAN', 'F2',  'Harbour Ferry · Ennore – Port',       'ferry', '#22d3ee', 240, 20, true);
 
 -- -----------------------------------------------------------------------------
 -- Line stop sequences (seq 1..n, travel minutes from the previous stop)
 -- -----------------------------------------------------------------------------
 insert into line_stops (line_id, stop_id, seq, travel_minutes_from_prev) values
-  -- M1 Red Line: Central Exchange → Northgate
+  -- M1 Metro Line 1: Chennai Central → Madhavaram
   ('LN-M1', 'STN-01', 1, 0), ('LN-M1', 'STN-08', 2, 3), ('LN-M1', 'STN-07', 3, 4),
   ('LN-M1', 'STN-06', 4, 4), ('LN-M1', 'STN-02', 5, 5), ('LN-M1', 'STN-04', 6, 6),
   ('LN-M1', 'STN-13', 7, 5),
-  -- M2 Blue Line: Harbour Gate → Airport Road
+  -- M2 Metro Line 2: Chennai Port → Chennai Airport
   ('LN-M2', 'STN-03', 1, 0), ('LN-M2', 'STN-10', 2, 4), ('LN-M2', 'STN-08', 3, 5),
   ('LN-M2', 'STN-01', 4, 3), ('LN-M2', 'STN-09', 5, 5), ('LN-M2', 'STN-05', 6, 4),
   ('LN-M2', 'STN-11', 7, 6),
-  -- B12 Crosstown: Greenfield → Hospital District
+  -- 21G MTC bus: Tambaram → Kilpauk
   ('LN-B12','STN-12', 1, 0), ('LN-B12','STN-14', 2, 5), ('LN-B12','STN-09', 3, 7),
   ('LN-B12','STN-01', 4, 8), ('LN-B12','STN-07', 5, 4), ('LN-B12','STN-15', 6, 9),
-  -- T4 Riverside Tram: Ferry Terminal → Stadium
+  -- T4 Heritage Tram: Ennore → Chepauk
   ('LN-T4', 'STN-16', 1, 0), ('LN-T4', 'STN-06', 2, 9), ('LN-T4', 'STN-08', 3, 5),
   ('LN-T4', 'STN-15', 4, 7), ('LN-T4', 'STN-10', 5, 6),
-  -- BR1 Harbour Express BRT: Airport Road → Central Exchange
+  -- BR1 BRT corridor: Chennai Airport → Chennai Central
   ('LN-BR1','STN-11', 1, 0), ('LN-BR1','STN-04', 2, 6), ('LN-BR1','STN-13', 3, 5),
   ('LN-BR1','STN-02', 4, 6), ('LN-BR1','STN-01', 5, 5),
-  -- F2 Harbour Ferry: Ferry Terminal → Harbour Gate
+  -- F2 Harbour Ferry: Ennore → Chennai Port
   ('LN-F2', 'STN-16', 1, 0), ('LN-F2', 'STN-03', 2, 22);
 
 -- -----------------------------------------------------------------------------

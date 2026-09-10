@@ -1,7 +1,7 @@
 {
   "name": "transitpulse-ai",
   "version": "0.1.0",
-  "description": "TransitPulse AI — crowd-aware transit planning (predict · avoid · optimize)",
+  "description": "TransitPulse AI \u2014 crowd-aware transit planning (predict \u00b7 avoid \u00b7 optimize)",
   "main": "index.js",
   "scripts": {
     "dev": "concurrently -k -n api,web -c magenta,cyan \"npm:dev:api\" \"npm:dev:web\"",
@@ -15,7 +15,9 @@
     "db:reset": "tsx server/scripts/db.ts reset",
     "db:migrate": "tsx server/scripts/db.ts migrate",
     "db:sql": "tsx server/scripts/db.ts sql",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "db:verify": "tsx server/scripts/db.ts verify",
+    "db:refresh": "tsx server/scripts/db.ts refresh"
   },
   "repository": {
     "type": "git",

@@ -14,12 +14,19 @@ import { listAlerts } from '../repositories/alerts.repo';
 import { listHotspots } from '../repositories/crowd.repo';
 import { getNetworkCounts } from '../repositories/operator.repo';
 import { getDefaultProfileId, listWatchlist, getProfile } from '../repositories/riders.repo';
-import { listDepartures, getStop, listStops } from '../repositories/network.repo';
+import { listDepartures, getStop, listStops, getAgency } from '../repositories/network.repo';
 import { MODEL_DEFAULTS, getConfig, type CrowdModelConfig } from '../repositories/config.repo';
 import { CrowdModel } from './crowd-model';
 import { planJourney } from './planner';
 import { env } from '../config/env';
-import { formatClock, minutesBetween } from '../lib/time';
+import {
+  clockToMinutes,
+  formatClock,
+  minutesBetween,
+  nextZonedClock,
+  zonedMinutes,
+  zonedParts,
+} from '../lib/time';
 
 /**
  * Commuter dashboard service — composes the rider's landing view from the
@@ -29,6 +36,9 @@ import { formatClock, minutesBetween } from '../lib/time';
  */
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+/** A saved departure more than this far away is shown as "leaving now". */
+const DEPART_NOW_WINDOW_MINUTES = 6 * 60;
 
 export async function buildCommuterDashboard(
   db: Queryable,
@@ -42,7 +52,8 @@ export async function buildCommuterDashboard(
   const profile: RiderProfile =
     (await getProfile(db, profileId)) ?? (await fallbackProfile(db, profileId));
 
-  const [watchlistRaw, crowdingNow, alerts, networkTotals, modelConfig, model] = await Promise.all([
+  const [agency, watchlistRaw, crowdingNow, alerts, networkTotals, modelConfig, model] = await Promise.all([
+    getAgency(db),
     listWatchlist(db, profile.id),
     listHotspots(db, 6),
     listAlerts(db, { limit: 6 }),
@@ -51,10 +62,13 @@ export async function buildCommuterDashboard(
     CrowdModel.load(db),
   ]);
 
-  const today = DAY_KEYS[new Date().getUTCDay()];
+  // Saved journeys are wall-clock times in the agency's timezone.
+  const timeZone = agency?.timezone ?? 'UTC';
+  const now = new Date();
+  const today = DAY_KEYS[zonedParts(now, timeZone).isoWeekday % 7];
   const scheduled = watchlistRaw.filter((item) => item.days.includes(today));
   const candidates = scheduled.length ? scheduled : watchlistRaw;
-  const upcoming = pickUpcoming(candidates);
+  const upcoming = pickUpcoming(candidates, now, timeZone);
 
   const stationBoards = (
     await Promise.all(
@@ -67,10 +81,18 @@ export async function buildCommuterDashboard(
 
   let nextJourney: CommuterDashboard['nextJourney'] = null;
   if (upcoming) {
+    // If the saved departure is still ahead, plan for it. Once it has passed we
+    // plan from now instead, so the dashboard always recommends something the
+    // rider can actually board.
+    const scheduledAt = nextZonedClock(now, timeZone, upcoming.departTime);
+    const untilScheduled = (scheduledAt.getTime() - now.getTime()) / 60000;
+    const departAfter =
+      untilScheduled > 0 && untilScheduled <= DEPART_NOW_WINDOW_MINUTES ? scheduledAt : now;
+
     const planned = await planJourney(db, {
       originStopId: upcoming.originStopId,
       destinationStopId: upcoming.destinationStopId,
-      departAfter: nextDepartureIso(upcoming.departTime),
+      departAfter: departAfter.toISOString(),
       profileId: profile.id,
       avoidCrowding: upcoming.avoidCrowded,
       persist: false,
@@ -89,7 +111,7 @@ export async function buildCommuterDashboard(
 
   const watchlist: WatchlistItem[] = await Promise.all(
     watchlistRaw.map(async (item) => {
-      const snapshot = await snapshotForItem(db, item, model);
+      const snapshot = await snapshotForItem(db, item, model, timeZone);
       return { ...item, prediction: snapshot };
     }),
   );
@@ -118,40 +140,39 @@ export async function buildCommuterDashboard(
   };
 }
 
-function pickUpcoming(items: WatchlistItem[]): WatchlistItem | undefined {
+function pickUpcoming(
+  items: WatchlistItem[],
+  now: Date,
+  timeZone: string,
+): WatchlistItem | undefined {
   if (!items.length) return undefined;
-  const nowMinutes = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
-  return (
-    [...items].sort((a, b) => {
-      const aMinutes = a.departTime ? toMinutes(a.departTime) : nowMinutes;
-      const bMinutes = b.departTime ? toMinutes(b.departTime) : nowMinutes;
-      return Math.abs(aMinutes - nowMinutes) - Math.abs(bMinutes - nowMinutes);
-    })[0] ?? items[0]
-  );
-}
+  const nowMinutes = zonedMinutes(now, timeZone);
 
-function toMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return (hours ?? 0) * 60 + (minutes ?? 0);
-}
+  // Prefer the next saved journey that is still ahead today; fall back to the
+  // one closest to now when every saved time has already passed.
+  const withMinutes = items.map((item) => ({
+    item,
+    minutes: item.departTime ? clockToMinutes(item.departTime) : nowMinutes,
+  }));
+  const ahead = withMinutes.filter((entry) => entry.minutes >= nowMinutes);
+  const ranked = ahead.length
+    ? [...ahead].sort((a, b) => a.minutes - b.minutes)
+    : // Every saved time has passed: pick the journey closest to now, so a late
+      // evening visit recommends the trip home rather than tomorrow's commute.
+      [...withMinutes].sort(
+        (a, b) => Math.abs(a.minutes - nowMinutes) - Math.abs(b.minutes - nowMinutes),
+      );
 
-/** Departure time for today at the saved clock time, or "now" when unset. */
-function nextDepartureIso(departTime: string | null): string {
-  const now = new Date();
-  if (!departTime) return now.toISOString();
-  const target = new Date(now);
-  const [hours, minutes] = departTime.split(':').map(Number);
-  target.setUTCHours(hours ?? now.getUTCHours(), minutes ?? now.getUTCMinutes(), 0, 0);
-  if (target.getTime() < now.getTime()) target.setUTCDate(target.getUTCDate() + 1);
-  return target.toISOString();
+  return ranked[0]?.item;
 }
 
 async function snapshotForItem(
   db: Queryable,
   item: WatchlistItem,
   model: CrowdModel,
+  timeZone: string,
 ): Promise<WatchlistItem['prediction']> {
-  const departIso = nextDepartureIso(item.departTime);
+  const departIso = nextZonedClock(new Date(), timeZone, item.departTime).toISOString();
   const departAt = new Date(departIso);
   const departures = await listDepartures(db, item.originStopId, departIso, 45);
   const next = departures[0];

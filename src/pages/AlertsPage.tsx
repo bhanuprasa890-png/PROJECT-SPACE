@@ -382,7 +382,7 @@ function AlertComposer({ onDone }: { onDone: () => void }) {
         <Field label="Title">
           <Input
             value={form.title}
-            placeholder="e.g. Platform change at Central Exchange"
+            placeholder="e.g. Platform change at T. Nagar"
             onChange={(event) => setForm({ ...form, title: event.target.value })}
           />
         </Field>

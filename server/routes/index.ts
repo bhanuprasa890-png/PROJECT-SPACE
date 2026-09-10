@@ -6,6 +6,7 @@ import { crowdRouter } from './crowd.routes';
 import { alertsRouter } from './alerts.routes';
 import { operatorRouter } from './operator.routes';
 import { riderRouter } from './rider.routes';
+import { datasetRouter } from './dataset.routes';
 
 /**
  * API surface (all paths are mounted under `/api`).
@@ -18,6 +19,8 @@ import { riderRouter } from './rider.routes';
  *   alerts   GET    /alerts · POST /alerts · PATCH /alerts/:id
  *   operator GET    /operator/overview | fleet | line-load | demand | config
  *   rider    GET    /dashboard | /profile | /settings/options | /watchlist
+ *   dataset  GET    /dataset/tables | /dataset/tables/:table | /dataset/schema/:table
+ *            POST   /dataset/refresh            rebuild canonical demo dataset
  */
 export const apiRouter = Router();
 
@@ -28,3 +31,4 @@ apiRouter.use(crowdRouter);
 apiRouter.use(alertsRouter);
 apiRouter.use(operatorRouter);
 apiRouter.use(riderRouter);
+apiRouter.use(datasetRouter);

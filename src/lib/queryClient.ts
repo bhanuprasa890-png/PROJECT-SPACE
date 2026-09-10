@@ -31,4 +31,7 @@ export const queryKeys = {
   watchlist: (profileId?: string) => ['watchlist', profileId ?? 'default'] as const,
   lineLoad: (dayType: string) => ['operator', 'line-load', dayType] as const,
   config: ['operator', 'config'] as const,
+  datasetTables: ['dataset', 'tables'] as const,
+  datasetRows: (table: string, params: Record<string, unknown>) =>
+    ['dataset', 'rows', table, params] as const,
 };

@@ -73,6 +73,61 @@ export function fractionalHour(date: Date, timeZone = 'UTC'): number {
   return hour + minute / 60;
 }
 
+/** Minutes the zone is ahead of UTC at `date` (IST → 330, UTC → 0). */
+export function zoneOffsetMinutes(date: Date, timeZone = 'UTC'): number {
+  const parts = zonedParts(date, timeZone);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    date.getUTCSeconds(),
+  );
+  return Math.round((asUtc - date.getTime()) / 60000);
+}
+
+/**
+ * The absolute instant for a `HH:MM` wall clock time in `timeZone` — today if
+ * that time is still ahead, otherwise the same clock time tomorrow.
+ *
+ * `timeZone` is the agency's timezone, so a saved 08:15 departure means 08:15
+ * where the rider actually is, not 08:15 UTC.
+ */
+export function nextZonedClock(
+  reference: Date,
+  timeZone: string,
+  clock: string | null,
+): Date {
+  if (!clock) return reference;
+
+  const [hours, minutes] = clock.split(':').map(Number);
+
+  // Wall-clock guess first, then shift the guess by the zone offset (applied
+  // twice so the result is correct across a DST boundary as well).
+  const parts = zonedParts(reference, timeZone);
+  const guess = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, hours ?? 0, minutes ?? 0, 0, 0));
+  let candidate = new Date(guess.getTime() - zoneOffsetMinutes(guess, timeZone) * 60000);
+  candidate = new Date(guess.getTime() - zoneOffsetMinutes(candidate, timeZone) * 60000);
+
+  if (candidate.getTime() <= reference.getTime()) {
+    candidate = new Date(candidate.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return candidate;
+}
+
+/** `HH:MM` wall clock of an instant, as minutes since local midnight. */
+export function zonedMinutes(date: Date, timeZone = 'UTC'): number {
+  const { hour, minute } = zonedParts(date, timeZone);
+  return hour * 60 + minute;
+}
+
+/** Local minute of the day for a `HH:MM` string. */
+export function clockToMinutes(clock: string): number {
+  const [hours, minutes] = clock.split(':').map(Number);
+  return (hours ?? 0) * 60 + (minutes ?? 0);
+}
+
 export function minutesBetween(from: Date | string, to: Date | string): number {
   return Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60000);
 }
