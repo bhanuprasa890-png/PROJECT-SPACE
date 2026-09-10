@@ -136,7 +136,7 @@ export function JourneyPlanner({
                   className={cn(
                     'inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors duration-200',
                     values.departMode === mode
-                      ? 'bg-white/12 text-mist-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                      ? 'bg-white/12 text-mist-100 inset-highlight'
                       : 'text-mist-400 hover:bg-white/4 hover:text-mist-200',
                   )}
                 >

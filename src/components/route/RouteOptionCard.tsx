@@ -75,7 +75,7 @@ export function RouteOptionCard({
       className={cn(
         'animate-rise group flex flex-col',
         isRecommended
-          ? 'border-pulse-400/40 shadow-[0_28px_70px_-46px_rgba(56,245,192,0.85)] ring-1 ring-pulse-400/25'
+          ? 'border-pulse-400/40 shadow-lift ring-1 ring-pulse-400/25'
           : 'border-white/10',
         className,
       )}
@@ -103,7 +103,7 @@ export function RouteOptionCard({
             </Badge>
           </div>
 
-          <h3 id={titleId} className="truncate text-[0.95rem] font-semibold text-mist-100" title={option.routeName}>
+          <h3 id={titleId} className="truncate text-md font-semibold text-mist-100" title={option.routeName}>
             {option.routeName}
           </h3>
 
@@ -133,7 +133,7 @@ export function RouteOptionCard({
         {/* headline figure — the number the rider actually compares */}
         <div className="shrink-0 text-right">
           <p className="flex items-baseline justify-end gap-1" data-figures>
-            <span className="font-display text-[2rem] leading-none font-semibold text-mist-100">
+            <span className="font-display text-display-md leading-none font-semibold text-mist-100">
               {option.totalMinutes}
             </span>
             <span className="text-xs text-mist-400">min</span>

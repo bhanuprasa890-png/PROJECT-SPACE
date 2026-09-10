@@ -179,7 +179,7 @@ export function AlertsPage() {
                             <span className="inline-flex items-center gap-1.5 text-3xs text-mist-300">
                               <span
                                 className="size-2 rounded-full"
-                                style={{ backgroundColor: alert.lineColor ?? '#38bdf8' }}
+                                style={{ backgroundColor: alert.lineColor ?? 'var(--color-sky-glow)' }}
                               />
                               {alert.lineCode}
                             </span>

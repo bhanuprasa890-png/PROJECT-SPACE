@@ -28,13 +28,13 @@ export const SCORE_TERMS: ScoreTerm[] = [
     key: 'travelMinutes',
     label: 'Travel time',
     hint: 'Time moving between stops, including any walking',
-    bar: 'bg-sky-400/80',
+    bar: 'bg-sky-glow/80',
   },
   {
     key: 'waitingMinutes',
     label: 'Waiting time',
     hint: 'Platform and interchange waiting before you board',
-    bar: 'bg-violet-400/80',
+    bar: 'bg-violet-glow/80',
   },
   {
     key: 'crowdPenaltyMinutes',

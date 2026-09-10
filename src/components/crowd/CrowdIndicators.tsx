@@ -2,6 +2,16 @@ import { CROWD_LEVELS, CROWD_LEVEL_META, CROWD_THRESHOLDS } from '@shared/crowd'
 import type { CrowdLevel } from '@shared/types';
 import { cn, crowdTone, formatPercent } from '../../lib/utils';
 
+/**
+ * Status dots carry a restrained halo — green/yellow/red stays legible against
+ * both the dark canvas and the glass panels without adding a second colour.
+ */
+const CROWD_GLOW: Record<CrowdLevel, string> = {
+  low: 'glow-low',
+  moderate: 'glow-moderate',
+  high: 'glow-high',
+};
+
 /** Green → yellow → orange → red status pill used everywhere crowding appears. */
 export function CrowdBadge({
   level,
@@ -29,10 +39,10 @@ export function CrowdBadge({
       )}
       title={tone.description}
     >
-      <span className={cn('size-1.5 rounded-full', tone.dot)} />
+      <span className={cn('size-1.5 rounded-full', tone.dot, CROWD_GLOW[level])} />
       {label ?? tone.label}
       {ratio !== undefined ? (
-        <span className="font-mono opacity-80">{formatPercent(ratio)}</span>
+        <span className="figure opacity-80">{formatPercent(ratio)}</span>
       ) : null}
     </span>
   );
@@ -138,7 +148,7 @@ export function CrowdLegend({ className }: { className?: string }) {
         const tone = crowdTone(level);
         return (
           <span key={level} className="inline-flex items-center gap-2 text-2xs text-mist-400">
-            <span className={cn('size-2 rounded-full', tone.dot)} />
+            <span className={cn('size-2 rounded-full', tone.dot, CROWD_GLOW[level])} />
             <span className={cn('font-medium', tone.text)}>{tone.label}</span>
             <span className="figure text-mist-500">{range}</span>
           </span>

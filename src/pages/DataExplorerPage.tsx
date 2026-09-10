@@ -59,7 +59,7 @@ function ColumnChips({ columns }: { columns: DatasetColumn[] }) {
             column.isPrimaryKey
               ? 'border-pulse-400/35 bg-pulse-400/10 text-pulse-200'
               : column.references
-                ? 'border-sky-400/25 bg-sky-400/8 text-sky-200'
+                ? 'border-sky-glow/25 bg-sky-glow/8 text-sky-glow'
                 : 'border-white/10 bg-white/5 text-mist-400',
           )}
         >
@@ -200,7 +200,7 @@ export function DataExplorerPage() {
           <CardHeader
             title="Dataset"
             subtitle="Canonical tables"
-            icon={<Database className="size-4 text-sky-300" />}
+            icon={<Database className="size-4 text-sky-glow" />}
           />
           <CardBody className="space-y-4 pt-3">
             {tables.isLoading ? (
@@ -254,7 +254,7 @@ export function DataExplorerPage() {
                           className={cn(
                             'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-colors',
                             view.name === activeTable
-                              ? 'border-sky-400/40 bg-sky-400/10'
+                              ? 'border-sky-glow/40 bg-sky-glow/10'
                               : 'border-white/8 bg-white/2 hover:border-white/16 hover:bg-white/6',
                           )}
                         >

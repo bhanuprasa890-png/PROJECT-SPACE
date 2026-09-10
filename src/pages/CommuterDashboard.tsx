@@ -141,7 +141,7 @@ export function CommuterDashboard() {
           aria-hidden
         />
         <span
-          className="pointer-events-none absolute -bottom-40 -left-24 size-80 rounded-full bg-sky-400/8 blur-3xl"
+          className="pointer-events-none absolute -bottom-40 -left-24 size-80 rounded-full bg-sky-glow/8 blur-3xl"
           aria-hidden
         />
 
@@ -155,8 +155,8 @@ export function CommuterDashboard() {
             </span>
 
             <div className="space-y-3">
-              <h1 className="font-display text-[2rem] leading-[1.08] font-semibold tracking-tight text-mist-50 sm:text-4xl lg:text-[2.75rem]">
-                Know the crowd <span className="text-pulse-300">before you board.</span>
+              <h1 className="font-display text-display-md leading-[1.08] font-semibold tracking-tight text-mist-50 sm:text-4xl lg:text-display-xl">
+                Know the crowd <span className="text-glow text-pulse-300">before you board.</span>
               </h1>
               <p className="max-w-xl text-sm leading-relaxed text-mist-300">
                 Tell TransitPulse where you are going. It predicts how full every option will be at
@@ -264,7 +264,7 @@ export function CommuterDashboard() {
                   <div className="flex items-end gap-4">
                     <div>
                       <p className="eyebrow text-mist-500">Board at</p>
-                      <p className="mt-1 font-display text-[2.25rem] leading-none font-semibold text-mist-100">
+                      <p className="mt-1 font-display text-display-md leading-none font-semibold text-mist-100">
                         {formatClock(bestOption.departAt)}
                       </p>
                     </div>
@@ -288,7 +288,7 @@ export function CommuterDashboard() {
                   </div>
                 </div>
 
-                <p className="rounded-xl border border-pulse-400/18 bg-pulse-400/[0.07] px-3.5 py-3 text-[0.82rem] leading-relaxed text-mist-200">
+                <p className="rounded-xl border border-pulse-400/18 bg-pulse-400/[0.07] px-3.5 py-3 text-sm leading-relaxed text-mist-200">
                   {bestOption.headline}
                 </p>
 

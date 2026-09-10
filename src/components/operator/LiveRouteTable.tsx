@@ -137,7 +137,7 @@ export function LiveRouteTable({
                         {route.routeNumber}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-[0.8rem] font-medium text-mist-100">
+                        <span className="block truncate text-sm font-medium text-mist-100">
                           {route.routeName}
                         </span>
                         <span className="flex items-center gap-1.5 text-3xs text-mist-500">
@@ -151,7 +151,7 @@ export function LiveRouteTable({
                   <td className="px-3 py-3">
                     <div className="w-[110px] space-y-1.5">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="figure text-[0.8rem] text-mist-100">
+                        <span className="figure text-sm text-mist-100">
                           {route.occupancyPct.toFixed(0)}%
                         </span>
                         <span className="figure text-3xs text-mist-500">
@@ -233,7 +233,7 @@ export function LiveRouteTable({
                   </td>
 
                   <td className="px-3 py-3 pr-5">
-                    <p className="text-[0.75rem] text-mist-200">{route.worstStopName ?? '—'}</p>
+                    <p className="text-xs text-mist-200">{route.worstStopName ?? '—'}</p>
                     <p className="mt-0.5 text-3xs text-mist-500">
                       {route.stopsMonitored} stops monitored ·{' '}
                       {route.peakHour === null

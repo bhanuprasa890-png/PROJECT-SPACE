@@ -7,7 +7,7 @@ type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-gradient-to-r from-pulse-500 to-pulse-400 text-ink-950 font-semibold shadow-[0_14px_34px_-18px_rgba(20,217,168,0.85)] hover:from-pulse-400 hover:to-pulse-300 hover:shadow-[0_18px_40px_-18px_rgba(20,217,168,0.95)]',
+    'glow-pulse bg-gradient-to-r from-pulse-500 to-pulse-400 font-semibold text-ink-950 transition-shadow hover:from-pulse-400 hover:to-pulse-300 hover:shadow-lift',
   secondary:
     'border border-white/10 bg-white/8 text-mist-100 hover:border-white/18 hover:bg-white/14',
   ghost: 'border border-transparent text-mist-300 hover:bg-white/6 hover:text-mist-100',
@@ -21,7 +21,7 @@ const VARIANTS: Record<Variant, string> = {
 const SIZES: Record<Size, string> = {
   sm: 'h-8 gap-1.5 rounded-lg px-3 text-xs',
   md: 'h-10 gap-2 rounded-xl px-4 text-sm',
-  lg: 'h-12 gap-2.5 rounded-xl px-6 text-[0.95rem]',
+  lg: 'h-12 gap-2.5 rounded-xl px-6 text-md',
   icon: 'size-9 rounded-lg',
 };
 

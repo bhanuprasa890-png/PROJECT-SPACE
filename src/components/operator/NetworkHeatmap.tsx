@@ -201,7 +201,7 @@ export function NetworkHeatmap({
                   cx={point.x}
                   cy={point.y}
                   r={isHovered ? radius + 2 : radius}
-                  fill="#020617"
+                  className="fill-ink-950"
                   stroke={dimmed ? 'rgba(148,163,184,0.4)' : tone.stroke}
                   strokeWidth={isHovered ? 3.5 : 2.5}
                   style={{ filter: dimmed ? undefined : `drop-shadow(0 0 8px ${tone.stroke}88)` }}
@@ -211,7 +211,7 @@ export function NetworkHeatmap({
                   <text
                     x={point.x + radius + 5}
                     y={point.y + 3.5}
-                    className="fill-mist-300 font-mono"
+                    className="figure fill-mist-300"
                     style={{ fontSize: 10, opacity: dimmed ? 0.35 : 0.95 }}
                   >
                     {stop.name}
@@ -335,7 +335,7 @@ export function NetworkHeatmap({
                 <span
                   className="size-1.5 rounded-full"
                   style={{
-                    backgroundColor: routeSegment?.color ?? '#94a3b8',
+                    backgroundColor: routeSegment?.color ?? 'var(--color-mist-400)',
                     boxShadow: `0 0 6px ${routeSegment?.color ?? '#94a3b8'}`,
                   }}
                 />

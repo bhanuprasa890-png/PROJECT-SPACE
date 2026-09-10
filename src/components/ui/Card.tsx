@@ -16,7 +16,7 @@ export interface CardProps {
 const ACCENTS: Record<NonNullable<CardProps['accent']>, string> = {
   none: '',
   pulse: 'before:bg-gradient-to-r before:from-transparent before:via-pulse-400/70 before:to-transparent',
-  sky: 'before:bg-gradient-to-r before:from-transparent before:via-sky-400/60 before:to-transparent',
+  sky: 'before:bg-gradient-to-r before:from-transparent before:via-sky-glow/60 before:to-transparent',
   warning:
     'before:bg-gradient-to-r before:from-transparent before:via-crowd-moderate/70 before:to-transparent',
   critical:
@@ -101,7 +101,7 @@ export function CardHeader({
           <h2
             className={cn(
               'font-display font-semibold text-mist-100',
-              size === 'compact' ? 'text-[0.9rem]' : 'text-[0.98rem]',
+              size === 'compact' ? 'text-sm' : 'text-md',
             )}
           >
             {title}

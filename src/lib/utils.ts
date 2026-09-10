@@ -140,10 +140,10 @@ export const MODE_LABELS: Record<string, string> = {
 
 export const SEVERITY_TONES: Record<string, CrowdTone> = {
   info: {
-    text: 'text-sky-300',
-    bg: 'bg-sky-400/12',
-    border: 'border-sky-400/35',
-    dot: 'bg-sky-400',
+    text: 'text-sky-glow',
+    bg: 'bg-sky-glow/12',
+    border: 'border-sky-glow/35',
+    dot: 'bg-sky-glow',
     stroke: '#60a5fa',
     fill: 'rgba(96,165,250,0.16)',
     label: 'Info',

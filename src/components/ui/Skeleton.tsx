@@ -216,13 +216,3 @@ export function ErrorState({
   );
 }
 
-/** Offline / API-unreachable variant — same shape, clearer cause. */
-export function OfflineState({ onRetry }: { onRetry?: () => void }) {
-  return (
-    <ErrorState
-      title="Cannot reach the TransitPulse API"
-      message="The dashboard reads every figure from the backend, so the console is paused until the connection returns."
-      onRetry={onRetry}
-    />
-  );
-}

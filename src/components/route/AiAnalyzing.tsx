@@ -97,7 +97,7 @@ export function AiAnalyzing({
 
             <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
               <span
-                className="block h-full rounded-full bg-gradient-to-r from-pulse-400/70 to-sky-400/70 transition-[width] duration-500 ease-out"
+                className="block h-full rounded-full bg-gradient-to-r from-pulse-400/70 to-sky-glow/70 transition-[width] duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>

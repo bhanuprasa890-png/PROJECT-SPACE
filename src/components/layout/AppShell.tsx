@@ -117,7 +117,7 @@ const PAGE_META: Record<string, { title: string; subtitle: string; eyebrow: stri
 function Logo() {
   return (
     <div className="flex items-center gap-3">
-      <span className="relative grid size-10 place-items-center rounded-xl border border-pulse-400/30 bg-gradient-to-br from-pulse-400/20 to-sky-400/10">
+      <span className="relative grid size-10 place-items-center rounded-xl border border-pulse-400/30 bg-gradient-to-br from-pulse-400/20 to-sky-glow/10">
         <Activity className="size-5 text-pulse-300" aria-hidden />
         <span className="absolute -inset-px animate-pulse-ring rounded-xl border border-pulse-400/40" aria-hidden />
       </span>
@@ -268,9 +268,9 @@ export function AppShell() {
           <div className="mt-6 space-y-3">
             <NavLink
               to="/engine"
-              className="flex items-center gap-2 rounded-xl border border-violet-400/25 bg-violet-400/[0.08] px-3 py-2.5 transition-colors hover:border-violet-400/40 hover:bg-violet-400/12"
+              className="flex items-center gap-2 rounded-xl border border-violet-glow/25 bg-violet-glow/[0.08] px-3 py-2.5 transition-colors hover:border-violet-glow/40 hover:bg-violet-glow/12"
             >
-              <FlaskConical className="size-4 shrink-0 text-violet-300" aria-hidden />
+              <FlaskConical className="size-4 shrink-0 text-violet-glow" aria-hidden />
               <span className="min-w-0">
                 <span className="block text-xs font-medium text-mist-100">Simulation Mode</span>
                 <span className="block text-3xs text-mist-500">Forecasts use simulated data</span>

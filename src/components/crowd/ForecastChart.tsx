@@ -133,12 +133,12 @@ export function ForecastChart({
       >
         <defs>
           <linearGradient id={bandId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#38f5c0" stopOpacity="0.24" />
-            <stop offset="100%" stopColor="#38f5c0" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.24" className="text-pulse-400" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.02" className="text-pulse-400" />
           </linearGradient>
           <linearGradient id={strokeId} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#38f5c0" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#38f5c0" />
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.55" className="text-pulse-400" />
+            <stop offset="100%" stopColor="currentColor" className="text-pulse-400" />
           </linearGradient>
         </defs>
 
@@ -150,15 +150,14 @@ export function ForecastChart({
               x2={WIDTH - PAD.right}
               y1={toY(ratio)}
               y2={toY(ratio)}
-              stroke={ratio === 0 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.07)'}
+              className={ratio === 0 ? 'stroke-white/16' : 'stroke-white/7'}
               strokeDasharray={ratio === 0 ? '0' : '3 5'}
             />
             <text
               x={8}
               y={toY(ratio) + 3.5}
-              fill="#55658a"
               fontSize="10"
-              fontFamily="JetBrains Mono"
+              className="figure fill-mist-500"
             >
               {Math.round(ratio * 100)}%
             </text>
@@ -166,9 +165,8 @@ export function ForecastChart({
               <text
                 x={WIDTH - PAD.right + 6}
                 y={toY(ratio) + 3.5}
-                fill="#55658a"
                 fontSize="9.5"
-                fontFamily="JetBrains Mono"
+                className="figure fill-mist-500"
               >
                 {label}
               </text>
@@ -201,17 +199,17 @@ export function ForecastChart({
               x2={nowX}
               y1={PAD.top}
               y2={PAD.top + innerH}
-              stroke="rgba(56,245,192,0.45)"
+              className="stroke-pulse-400/45"
               strokeDasharray="4 4"
             />
-            <text x={nowX + 6} y={PAD.top + 11} fill="#38f5c0" fontSize="10">
+            <text x={nowX + 6} y={PAD.top + 11} fontSize="10" className="figure fill-pulse-400">
               now
             </text>
           </g>
         ) : null}
 
         {/* measured history — deliberately quieter than the forecast */}
-        <path d={linePath} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="1.5" />
+        <path d={linePath} className="stroke-white/16" fill="none" strokeWidth="1.5" />
 
         {/* forecast emphasis */}
         <path
@@ -237,9 +235,8 @@ export function ForecastChart({
               cy={toY(point.ratio)}
               r={hover === index ? 5 : 3}
               fill={crowdToneForRatio(point.ratio).stroke}
-              stroke="#04060c"
               strokeWidth="1.5"
-              className="transition-[r] duration-150"
+              className="stroke-ink-950 transition-[r] duration-150"
             />
           ) : null,
         )}
@@ -251,10 +248,9 @@ export function ForecastChart({
               key={`label-${point.targetAt}`}
               x={toX(index)}
               y={HEIGHT - 10}
-              fill="#55658a"
               fontSize="10"
               textAnchor="middle"
-              fontFamily="JetBrains Mono"
+              className="figure fill-mist-500"
             >
               {formatClock(point.targetAt)}
             </text>

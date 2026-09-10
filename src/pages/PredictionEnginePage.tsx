@@ -223,7 +223,7 @@ export function PredictionEnginePage() {
       <Card accent="pulse" className="overflow-hidden">
         <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-violet-400/30 bg-violet-400/10 text-violet-300">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-violet-glow/30 bg-violet-glow/10 text-violet-glow">
               <FlaskConical className="size-5" />
             </span>
             <div className="min-w-0">
@@ -493,7 +493,7 @@ export function PredictionEnginePage() {
                     <p className="text-2xs tracking-wide text-mist-400 uppercase">
                       Pluggable interface
                     </p>
-                    <p className="mt-1 figure text-[0.66rem] leading-relaxed text-mist-300">
+                    <p className="mt-1 figure text-xs leading-relaxed text-mist-300">
                       type OccupancyPredictor = &#123; predict(input: PredictionInput):
                       Promise&lt;PredictionCore&gt; &#125;
                     </p>
@@ -504,7 +504,7 @@ export function PredictionEnginePage() {
                     </p>
                   </div>
                   <p className="text-mist-400">{report.routeOptimization.detail}</p>
-                  <p className="figure text-[0.66rem] text-mist-500">
+                  <p className="figure text-xs text-mist-500">
                     {report.routeOptimization.scoreFormula}
                   </p>
                 </>

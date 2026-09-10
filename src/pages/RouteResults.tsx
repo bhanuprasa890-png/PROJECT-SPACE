@@ -137,7 +137,7 @@ export function RouteResults() {
       />
 
       {plan.data?.serviceNote ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-sky-400/25 bg-sky-400/[0.07] px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-sky-glow/25 bg-sky-glow/[0.07] px-4 py-3">
           <Badge tone="info" size="xs" icon={<CalendarClock className="size-3" />}>
             Next service
           </Badge>
@@ -230,7 +230,7 @@ export function RouteResults() {
               <CardBody className="space-y-3">
                 {recommended ? (
                   <div className="rounded-xl border border-pulse-400/22 bg-pulse-400/[0.07] px-3.5 py-3">
-                    <p className="text-[0.82rem] leading-relaxed text-mist-100">{recommended.headline}</p>
+                    <p className="text-sm leading-relaxed text-mist-100">{recommended.headline}</p>
                     <ul className="mt-2.5 space-y-1.5">
                       {recommended.rationale.map((line) => (
                         <li key={line} className="flex gap-2 text-2xs leading-relaxed text-mist-300">

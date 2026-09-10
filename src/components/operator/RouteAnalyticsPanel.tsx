@@ -158,7 +158,7 @@ export function RouteAnalyticsPanel({
                 x={WIDTH - PAD_X}
                 y={geometry.thresholdY(guide.ratio) - 4}
                 textAnchor="end"
-                className="fill-mist-500 font-mono"
+                className="figure fill-mist-500"
                 style={{ fontSize: 9 }}
               >
                 {guide.label}
@@ -169,9 +169,9 @@ export function RouteAnalyticsPanel({
           {/* measured history */}
           <path
             d={`${geometry.historyPath} L${geometry.points[geometry.points.length - 1].x},${HEIGHT - PAD_Y} L${PAD_X},${HEIGHT - PAD_Y} Z`}
-            fill="rgba(56,245,192,0.08)"
+            className="fill-pulse-400/8"
           />
-          <path d={geometry.historyPath} fill="none" stroke="#38f5c0" strokeWidth={2} strokeLinejoin="round" />
+          <path d={geometry.historyPath} className="stroke-pulse-400" fill="none" strokeWidth={2} strokeLinejoin="round" />
 
           {/* forecast */}
           {geometry.forecastPath ? (
@@ -194,12 +194,12 @@ export function RouteAnalyticsPanel({
             stroke="rgba(226,232,240,0.5)"
             strokeDasharray="2 3"
           />
-          <text x={geometry.nowX + 4} y={PAD_Y - 8} className="fill-mist-400 font-mono" style={{ fontSize: 9 }}>
+          <text x={geometry.nowX + 4} y={PAD_Y - 8} className="figure fill-mist-400" style={{ fontSize: 9 }}>
             now
           </text>
 
           {/* current + predicted markers */}
-          <circle cx={geometry.nowX} cy={geometry.thresholdY(active.currentPct / 100)} r={4} fill="#38f5c0" />
+          <circle cx={geometry.nowX} cy={geometry.thresholdY(active.currentPct / 100)} r={4} className="fill-pulse-400" />
           {geometry.last ? (
             <circle cx={geometry.last.x} cy={geometry.last.y} r={4} fill={tone.stroke} />
           ) : null}

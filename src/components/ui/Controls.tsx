@@ -78,7 +78,7 @@ export function Toggle({
   return (
     <div className="flex items-start justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/14">
       <div className="min-w-0">
-        <p className="text-[0.82rem] font-medium text-mist-100">{label}</p>
+        <p className="text-sm font-medium text-mist-100">{label}</p>
         {description ? <p className="mt-1 text-2xs leading-relaxed text-mist-400">{description}</p> : null}
       </div>
       <button
@@ -99,7 +99,7 @@ export function Toggle({
           className={cn(
             'absolute top-0.5 size-[1.1rem] rounded-full transition-all duration-300',
             checked
-              ? 'left-[1.5rem] bg-pulse-300 shadow-[0_0_12px_rgba(56,245,192,0.8)]'
+              ? 'glow-pulse left-[1.5rem] bg-pulse-300'
               : 'left-0.5 bg-mist-400',
           )}
           aria-hidden
@@ -141,7 +141,7 @@ export function Segmented<T extends string>({
             'inline-flex shrink-0 items-center gap-1.5 rounded-lg font-medium transition-all duration-200',
             size === 'sm' ? 'px-2.5 py-1.5 text-2xs' : 'px-3.5 py-2 text-xs',
             value === option.value
-              ? 'bg-white/12 text-mist-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]'
+              ? 'bg-white/12 text-mist-100 inset-highlight'
               : 'text-mist-400 hover:text-mist-200',
           )}
         >

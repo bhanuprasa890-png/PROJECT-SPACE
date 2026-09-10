@@ -89,7 +89,7 @@ export function AiAlertFeed({
                     style.tone === 'critical' && 'border-crowd-critical/40 bg-crowd-critical/12 text-crowd-critical',
                     style.tone === 'high' && 'border-crowd-high/40 bg-crowd-high/12 text-crowd-high',
                     style.tone === 'moderate' && 'border-crowd-moderate/40 bg-crowd-moderate/12 text-crowd-moderate',
-                    style.tone === 'info' && 'border-sky-400/35 bg-sky-400/12 text-sky-300',
+                    style.tone === 'info' && 'border-sky-glow/35 bg-sky-glow/12 text-sky-glow',
                   )}
                 >
                   <Icon className="size-3.5" aria-hidden />

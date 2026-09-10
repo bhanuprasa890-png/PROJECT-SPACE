@@ -52,7 +52,7 @@ export function OccupancyPredictionCard({
           <div className="min-w-0">
             <p className="eyebrow text-mist-400">Predicted occupancy</p>
             <p className={cn('mt-1.5 flex items-baseline gap-1', peakTone)} data-figures>
-              <span className="font-display text-[2.5rem] leading-none font-semibold">
+              <span className="font-display text-display-lg leading-none font-semibold">
                 {Math.round(option.crowdRisk * 100)}
               </span>
               <span className="text-lg font-normal text-mist-400">%</span>
@@ -132,7 +132,7 @@ export function OccupancyPredictionCard({
         ) : null}
 
         <p className="flex items-start gap-1.5 text-3xs leading-relaxed text-mist-500">
-          <Sparkles className="mt-0.5 size-3 shrink-0 text-violet-300" aria-hidden />
+          <Sparkles className="mt-0.5 size-3 shrink-0 text-violet-glow" aria-hidden />
           Simulated prediction from the TransitPulse crowd model — not a measurement of a live network.
         </p>
       </CardBody>

@@ -18,8 +18,8 @@ const TONES: Record<Tone, string> = {
   moderate: 'border-crowd-moderate/35 bg-crowd-moderate/12 text-crowd-moderate',
   high: 'border-crowd-high/40 bg-crowd-high/14 text-crowd-high',
   critical: 'border-crowd-critical/45 bg-crowd-critical/14 text-crowd-critical',
-  info: 'border-sky-400/35 bg-sky-400/12 text-sky-300',
-  violet: 'border-violet-400/35 bg-violet-400/12 text-violet-300',
+  info: 'border-sky-glow/35 bg-sky-glow/12 text-sky-glow',
+  violet: 'border-violet-glow/35 bg-violet-glow/12 text-violet-glow',
 };
 
 const DOTS: Record<Tone, string> = {
@@ -29,8 +29,16 @@ const DOTS: Record<Tone, string> = {
   moderate: 'bg-crowd-moderate',
   high: 'bg-crowd-high',
   critical: 'bg-crowd-critical',
-  info: 'bg-sky-400',
-  violet: 'bg-violet-400',
+  info: 'bg-sky-glow',
+  violet: 'bg-violet-glow',
+};
+
+/** Crowd tones get a soft halo so the indicator reads at a glance. */
+const GLOWS: Partial<Record<Tone, string>> = {
+  low: 'glow-low',
+  moderate: 'glow-moderate',
+  high: 'glow-high',
+  critical: 'glow-high',
 };
 
 export interface BadgeProps {
@@ -73,7 +81,7 @@ export function Badge({
               className={cn('absolute inline-flex size-full animate-ping-slow rounded-full opacity-60', DOTS[tone])}
             />
           ) : null}
-          <span className={cn('relative inline-flex size-1.5 rounded-full', DOTS[tone])} />
+          <span className={cn('relative inline-flex size-1.5 rounded-full', DOTS[tone], GLOWS[tone])} />
         </span>
       ) : null}
       {icon}
@@ -99,7 +107,7 @@ export function StatusDot({
           className={cn('absolute inline-flex size-full animate-ping-slow rounded-full opacity-70', DOTS[tone])}
         />
       ) : null}
-      <span className={cn('relative inline-flex size-2 rounded-full', DOTS[tone])} />
+      <span className={cn('relative inline-flex size-2 rounded-full', DOTS[tone], GLOWS[tone])} />
     </span>
   );
 }

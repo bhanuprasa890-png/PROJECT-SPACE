@@ -22,9 +22,9 @@ export interface StatTileProps {
 }
 
 const TONE_STROKE: Record<string, string> = {
-  positive: '#34d399',
-  negative: '#f43f5e',
-  neutral: '#38f5c0',
+  positive: 'text-crowd-low',
+  negative: 'text-crowd-critical',
+  neutral: 'text-pulse-400',
 };
 
 const ACCENT_MAP: Record<NonNullable<StatTileProps['accent']>, 'none' | 'pulse' | 'sky' | 'warning' | 'critical'> = {
@@ -100,7 +100,7 @@ export function StatTile({
       </div>
 
       <div className="mt-2.5 flex items-baseline gap-1.5" data-figures>
-        <span className="font-display text-[1.75rem] leading-none font-semibold text-mist-100">
+        <span className="font-display text-display-sm leading-none font-semibold text-mist-100">
           {display}
         </span>
         {unit ? <span className="text-xs text-mist-400">{unit}</span> : null}
@@ -125,7 +125,7 @@ export function StatTile({
 
       {series && series.length > 1 ? (
         <div className="mt-3 -mx-1" aria-hidden>
-          <Sparkline data={series} color={TONE_STROKE[tone]} height={30} />
+          <Sparkline data={series} colorClassName={TONE_STROKE[tone]} height={30} />
         </div>
       ) : null}
 

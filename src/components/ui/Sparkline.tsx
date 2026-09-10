@@ -7,14 +7,15 @@ import { cn } from '../../lib/utils';
  */
 export function Sparkline({
   data,
-  color = '#38f5c0',
+  colorClassName = 'text-pulse-400',
   className,
   height = 34,
   filled = true,
   strokeWidth = 1.75,
 }: {
   data: number[];
-  color?: string;
+  /** Token class driving the line, area gradient and end cap (`currentColor`). */
+  colorClassName?: string;
   className?: string;
   height?: number;
   filled?: boolean;
@@ -54,21 +55,21 @@ export function Sparkline({
     <svg
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
-      className={cn('w-full', className)}
+      className={cn('w-full', colorClassName, className)}
       style={{ height }}
       aria-hidden
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.32" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
         </linearGradient>
       </defs>
       {filled ? <path d={area} fill={`url(#${gradientId})`} /> : null}
       <path
         d={line}
         fill="none"
-        stroke={color}
+        stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -78,7 +79,7 @@ export function Sparkline({
         cx={coordinates[coordinates.length - 1][0]}
         cy={coordinates[coordinates.length - 1][1]}
         r="2"
-        fill={color}
+        fill="currentColor"
       />
     </svg>
   );

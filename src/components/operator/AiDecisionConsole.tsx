@@ -217,12 +217,12 @@ function ScanChart({
       >
         <defs>
           <linearGradient id="scan-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(244,63,94,0.35)" />
-            <stop offset="100%" stopColor="rgba(244,63,94,0)" />
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.35" className="text-crowd-critical" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0" className="text-crowd-critical" />
           </linearGradient>
         </defs>
         <path d={geometry.area} fill="url(#scan-fill)" />
-        <path d={geometry.line} fill="none" stroke="#fb7185" strokeWidth={0.7} vectorEffect="non-scaling-stroke" />
+        <path d={geometry.line} className="stroke-crowd-high" fill="none" strokeWidth={0.7} vectorEffect="non-scaling-stroke" />
         <line
           x1={0}
           x2={geometry.width}
@@ -244,7 +244,7 @@ function ScanChart({
               strokeWidth={0.4}
               vectorEffect="non-scaling-stroke"
             />
-            <circle cx={geometry.crossX} cy={geometry.crossY} r={1.6} fill="#f43f5e" />
+            <circle cx={geometry.crossX} cy={geometry.crossY} r={1.6} className="fill-crowd-critical" />
           </>
         ) : null}
       </svg>
@@ -659,7 +659,7 @@ export function AiDecisionConsole({
                 An intervention was already applied to {title}{' '}
                 {conflict.appliedAt ? `at ${formatClock(conflict.appliedAt)}` : ''} — projected{' '}
                 {conflict.projectedPct.toFixed(1)}% (decision{' '}
-                <span className="font-mono">{conflict.id}</span>). Press <em>Re-assess</em> to
+                <span className="figure">{conflict.id}</span>). Press <em>Re-assess</em> to
                 recompute the route with the extra vehicle in service.
               </div>
             ) : null}
