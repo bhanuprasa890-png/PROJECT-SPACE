@@ -39,6 +39,8 @@ const TABLES = [
   'route_search_options',
   'model_config',
   'weather_conditions',
+  'ai_decisions',
+  'ai_decision_actions',
 ];
 
 /**
@@ -242,8 +244,45 @@ async function verify(db: Queryable): Promise<boolean> {
   );
   check('one weather slot per city per hour', Number(weatherDupes?.count ?? 0) === 0);
 
+  // --- 5b. AI intervention ledger -------------------------------------------
+  const decisions = await db.one<{ count: string; applied: string; alerts: string; vehicles: string }>(
+    `select count(*)::text as count,
+            count(*) filter (where status = 'applied')::text as applied,
+            count(alert_id)::text as alerts,
+            count(vehicle_id)::text as vehicles
+       from ai_decisions`,
+  );
+  check(
+    'AI decisions seeded (intervention ledger)',
+    Number(decisions?.applied ?? 0) >= 1,
+    `${decisions?.count ?? 0} rows, ${decisions?.applied ?? 0} applied`,
+  );
+  check(
+    'applied decisions reference an alert and a vehicle',
+    Number(decisions?.alerts ?? 0) >= 1 && Number(decisions?.vehicles ?? 0) >= 1,
+    `${decisions?.alerts ?? 0} alert(s), ${decisions?.vehicles ?? 0} vehicle(s)`,
+  );
+
+  const decisionActions = await db.one<{ count: string; keys: string }>(
+    `select count(*)::text as count, count(distinct action_key)::text as keys
+       from ai_decision_actions`,
+  );
+  check(
+    'AI decision actions recorded',
+    Number(decisionActions?.count ?? 0) >= 3,
+    `${decisionActions?.count ?? 0} actions across ${decisionActions?.keys ?? 0} kinds`,
+  );
+
+  const badProjection = await db.one<{ count: string }>(
+    `select count(*)::text as count from ai_decisions where projected_ratio > predicted_ratio`,
+  );
+  check(
+    'intervention never projected worse than the forecast',
+    Number(badProjection?.count ?? 0) === 0,
+  );
+
   // --- 6. published views expose the requested names ------------------------
-  for (const view of ['v_stops', 'v_vehicles', 'v_alerts', 'v_users']) {
+  for (const view of ['v_stops', 'v_vehicles', 'v_alerts', 'v_users', 'v_ai_interventions']) {
     const row = await db.one<{ count: string }>(`select count(*)::text as count from ${view}`);
     check(`view ${view}`, Number(row?.count ?? 0) > 0, `${row?.count ?? 0} rows`);
   }

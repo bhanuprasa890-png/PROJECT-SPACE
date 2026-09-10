@@ -126,6 +126,34 @@ export const DATASET_TABLES: DatasetTableDef[] = [
     defaultOrder: 'role, name',
     description: 'Read-only view exposing `app_users` under the requested `users` name.',
   },
+  {
+    name: 'ai_decisions',
+    label: 'AI decisions',
+    kind: 'table',
+    requestedAs: 'ai_decisions',
+    primaryKey: 'id',
+    defaultOrder: 'detected_at desc',
+    description:
+      'AI congestion decisions and the interventions applied from the Operator Command Center.',
+  },
+  {
+    name: 'ai_decision_actions',
+    label: 'AI decision actions',
+    kind: 'table',
+    requestedAs: 'ai_decision_actions',
+    primaryKey: 'id',
+    defaultOrder: 'decision_id, seq',
+    description: 'Numbered actions inside a decision, each with its modelled relief at the peak.',
+  },
+  {
+    name: 'v_ai_interventions',
+    label: 'AI interventions (joined)',
+    kind: 'view',
+    requestedAs: 'v_ai_interventions',
+    primaryKey: 'id',
+    defaultOrder: 'applied_at desc',
+    description: 'Read-only view joining each decision to the vehicle it released and its alert.',
+  },
 ];
 
 export const DATASET_TABLE_NAMES: readonly string[] = DATASET_TABLES.map((table) => table.name);
@@ -143,4 +171,6 @@ export const DATASET_MINIMUMS: Record<string, number> = {
   route_options: 20,
   service_alerts: 10,
   app_users: 3,
+  ai_decisions: 2,
+  ai_decision_actions: 5,
 };

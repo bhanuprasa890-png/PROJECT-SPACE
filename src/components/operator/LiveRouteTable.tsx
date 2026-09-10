@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Bus, Inbox } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Bus, Inbox, Sparkles } from 'lucide-react';
 import type { CommandRouteRow } from '@shared/types';
 import { Badge } from '../ui/Badge';
 import { CrowdBadge, CrowdMeter } from '../crowd/CrowdIndicators';
@@ -117,7 +117,18 @@ export function LiveRouteTable({
                 </td>
 
                 <td className="px-3 py-3">
-                  <CrowdBadge level={route.level} size="xs" />
+                  <div className="flex flex-col items-start gap-1">
+                    <CrowdBadge level={route.level} size="xs" />
+                    {route.activeIntervention ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-md border border-crowd-low/40 bg-crowd-low/10 px-1.5 py-0.5 font-mono text-[0.58rem] text-crowd-low"
+                        title={`AI intervention ${route.activeIntervention.id} applied — projected ${route.activeIntervention.projectedPct.toFixed(1)}%`}
+                      >
+                        <Sparkles className="size-2.5" />
+                        AI {route.activeIntervention.projectedPct.toFixed(0)}%
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
 
                 <td className="px-3 py-3">

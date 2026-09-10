@@ -15,6 +15,7 @@ import type {
   HeatmapStop,
   RouteAnalytics,
   RouteAnalyticsPoint,
+  RouteIntervention,
   RouteOperatingStatus,
   TrendDirection,
 } from '../../shared/types';
@@ -33,6 +34,13 @@ import {
   type CommandLineRow,
   type CommandStopRow,
 } from '../repositories/command.repo';
+import {
+  countInterventionsSince,
+  listInterventions,
+  listInterventionsByLine,
+  toInterventionSummary,
+  type InterventionReadRow,
+} from '../repositories/ai-decision.repo';
 import { PredictionEngine, SIMULATION_DISCLAIMER } from './prediction';
 
 /**
@@ -103,6 +111,21 @@ function trendFor(current: number, predicted: number): { trend: TrendDirection; 
   if (deltaPct >= 6) return { trend: 'rising', deltaPct };
   if (deltaPct <= -6) return { trend: 'falling', deltaPct };
   return { trend: 'stable', deltaPct };
+}
+
+/** Latest applied intervention on a route, shaped for the live route table. */
+function toRouteIntervention(row: InterventionReadRow | undefined): RouteIntervention | null {
+  if (!row || !row.applied_at) return null;
+  return {
+    id: row.id,
+    appliedAt: new Date(row.applied_at).toISOString(),
+    withoutPct: Number(row.predicted_pct),
+    projectedPct: Number(row.projected_pct),
+    reliefPct: Number(row.relief_pct),
+    actionCount: Number(row.action_count),
+    vehicleCode: row.vehicle_code,
+    alertId: row.alert_id,
+  };
 }
 
 const STATUS_LABELS: Record<RouteOperatingStatus, string> = {
@@ -558,8 +581,21 @@ export async function buildCommandCenter(
   const historyHours = options.historyHours ?? 24;
   const forecastHours = options.forecastHours ?? 6;
 
-  const [network, lineRows, stopRows, notices, fleet, targets, netHistory, netForecast, lineHistory, lineForecast] =
-    await Promise.all([
+  const [
+    network,
+    lineRows,
+    stopRows,
+    notices,
+    fleet,
+    targets,
+    netHistory,
+    netForecast,
+    lineHistory,
+    lineForecast,
+    interventionRows,
+    interventionsByLine,
+    interventions24h,
+  ] = await Promise.all([
       getCommandNetwork(db),
       listCommandLines(db),
       listCommandLineStops(db),
@@ -570,7 +606,14 @@ export async function buildCommandCenter(
       listNetworkForecast(db, forecastHours),
       listLineHistory(db, historyHours),
       listLineForecast(db, 4),
+      listInterventions(db, 8),
+      listInterventionsByLine(db, 24),
+      countInterventionsSince(db, 24),
     ]);
+
+  const interventionByLine = new Map<string, InterventionReadRow>(
+    interventionsByLine.map((row) => [row.line_id, row]),
+  );
 
   const engine = await PredictionEngine.load(db);
 
@@ -683,6 +726,7 @@ export async function buildCommandCenter(
         (notice) =>
           notice.line_id === line.row.line_id && now - new Date(notice.starts_at).getTime() < 3_600_000,
       ).length,
+      activeIntervention: toRouteIntervention(interventionByLine.get(line.row.line_id)),
     };
   });
 
@@ -780,6 +824,7 @@ export async function buildCommandCenter(
       predictedOccupancyPct: predictedNetworkPct,
       passengersOnboard: Number(network.passengers_onboard ?? 0),
       networkCapacity: Number(network.network_capacity ?? 0),
+      interventions24h,
       status,
       statusDetail,
     },
@@ -788,6 +833,7 @@ export async function buildCommandCenter(
     alerts: buildAlerts(computed, notices, crowdingThresholdPct),
     recommendations: buildRecommendations(computed, fleet, crowdingThresholdPct, stopNameById),
     analytics: { network: networkSeries, routes: analytics },
+    decisions: interventionRows.map(toInterventionSummary),
     crowdingThresholdPct,
     refreshSeconds: 60,
   };

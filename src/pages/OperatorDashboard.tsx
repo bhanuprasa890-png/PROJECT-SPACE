@@ -6,7 +6,9 @@ import {
   BusFront,
   CircleDot,
   Cloud,
+  FlaskConical,
   Gauge,
+  History,
   MapPinned,
   RefreshCw,
   Siren,
@@ -14,8 +16,14 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import type { AiAlert, AiRecommendation } from '@shared/types';
-import { useCommandCenter, useCreateAlert } from '../hooks/useTransitData';
+import type { AiAlert, AiDecisionApplyResult, AiRecommendation } from '@shared/types';
+import {
+  useAiDecision,
+  useApplyAiDecision,
+  useCommandCenter,
+  useCreateAlert,
+} from '../hooks/useTransitData';
+import { ApiError } from '../lib/api';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -26,6 +34,10 @@ import { AiAlertFeed } from '../components/operator/AiAlertFeed';
 import { AiRecommendations } from '../components/operator/AiRecommendations';
 import { LiveRouteTable } from '../components/operator/LiveRouteTable';
 import { RouteAnalyticsPanel } from '../components/operator/RouteAnalyticsPanel';
+import {
+  AiDecisionConsole,
+  InterventionHistory,
+} from '../components/operator/AiDecisionConsole';
 import { cn } from '../lib/utils';
 
 /**
@@ -61,13 +73,33 @@ export function OperatorDashboard() {
   const command = useCommandCenter(60_000);
   const createAlert = useCreateAlert();
 
+  const applyDecision = useApplyAiDecision();
+
   const [routeFilter, setRouteFilter] = useState<string | null>(null);
+  const [focusRoute, setFocusRoute] = useState<string | null>(null);
   const [mode, setMode] = useState<HeatmapMode>('live');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [applied, setApplied] = useState<AiDecisionApplyResult | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const now = useClock();
 
   const data = command.data;
+
+  /**
+   * Which route the AI decision console is about: the route an operator picked,
+   * or — before anyone picks — the route the engine rates as most at risk, so the
+   * console is never empty when the demo opens.
+   */
+  const decisionRoute = useMemo(() => {
+    if (focusRoute) return focusRoute;
+    if (!data?.routes.length) return null;
+    const risk = (route: (typeof data.routes)[number]) =>
+      Math.max(route.occupancyPct, route.predictedPct, route.activeIntervention ? 0 : 0);
+    return [...data.routes].sort((a, b) => risk(b) - risk(a))[0]?.routeNumber ?? null;
+  }, [data, focusRoute]);
+
+  const decision = useAiDecision(decisionRoute);
 
   const analytics = useMemo(() => {
     if (!data) return null;
@@ -131,6 +163,53 @@ export function OperatorDashboard() {
       },
       `Dispatched: ${recommendation.title}`,
     );
+
+  const handleApplyDecision = async (): Promise<void> => {
+    if (!decisionRoute) return;
+    setApplyError(null);
+    try {
+      const result = await applyDecision.mutateAsync({ lineId: decisionRoute });
+      setApplied(result);
+      setFlash(
+        `AI intervention applied to ${result.intervention.routeNumber} · ${result.intervention.predictedPct.toFixed(
+          0,
+        )}% → ${result.intervention.projectedPct.toFixed(0)}% projected occupancy · ${result.effects.alert.id} raised`,
+      );
+      window.setTimeout(() => setFlash(null), 8_000);
+    } catch (error) {
+      setApplyError(
+        error instanceof ApiError && error.status === 409
+          ? `${error.message} Press Re-assess to recompute the route with the extra vehicle.`
+          : (error as Error).message,
+      );
+    }
+  };
+
+  const handleReassess = (): void => {
+    setApplied(null);
+    setApplyError(null);
+    void decision.refetch();
+  };
+
+  /** Selecting a route focuses the AI decision console as well as the tables. */
+  const handleSelectRoute = (routeNumber: string | null): void => {
+    setRouteFilter(routeNumber);
+    if (!routeNumber) return;
+    setFocusRoute(routeNumber);
+    setApplyError(null);
+    setApplied((current) =>
+      current && current.intervention.routeNumber === routeNumber ? current : null,
+    );
+  };
+
+  /** An intervention already applied to the focused route (from the payload). */
+  const focusIntervention = useMemo(() => {
+    if (!data || !decisionRoute) return null;
+    if (applied?.intervention.routeNumber === decisionRoute) return null;
+    return (
+      data.routes.find((route) => route.routeNumber === decisionRoute)?.activeIntervention ?? null
+    );
+  }, [data, decisionRoute, applied]);
 
   const routesShown = data && routeFilter
     ? data.routes.filter((route) => route.routeNumber === routeFilter)
@@ -326,9 +405,60 @@ export function OperatorDashboard() {
             <LiveRouteTable
               routes={routesShown}
               selectedRoute={routeFilter}
-              onSelectRoute={setRouteFilter}
+              onSelectRoute={handleSelectRoute}
             />
           )}
+        </CardBody>
+      </Card>
+
+      {/* ------------------------------------------- 2b AI decision console */}
+      <Card accent={applied ? 'pulse' : 'none'}>
+        <CardHeader
+          title="AI decision console"
+          subtitle="Select a route to detect its next congestion event, review the numbered actions and apply the recommendation"
+          icon={<Sparkles className="size-4" />}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              {decisionRoute ? (
+                <Badge tone="neutral" size="xs">
+                  {decisionRoute}
+                </Badge>
+              ) : null}
+              <Badge tone="violet" size="xs" icon={<FlaskConical className="size-3" />}>
+                Simulated projections
+              </Badge>
+            </div>
+          }
+        />
+        <CardBody className="space-y-4 pt-3">
+          <AiDecisionConsole
+            proposal={decision.data?.decision}
+            isLoading={decision.isLoading}
+            isError={decision.isError}
+            errorMessage={decision.error ? (decision.error as Error).message : undefined}
+            routeLabel={decisionRoute}
+            applied={applied && applied.intervention.routeNumber === decisionRoute ? applied : null}
+            conflict={focusIntervention}
+            isApplying={applyDecision.isPending}
+            applyError={applyError}
+            onApply={() => void handleApplyDecision()}
+            onReassess={handleReassess}
+            onRetry={() => void decision.refetch()}
+          />
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <History className="size-3.5 text-mist-400" />
+              <span className="text-[0.62rem] tracking-wider text-mist-500 uppercase">
+                Interventions applied
+              </span>
+              <span className="h-px flex-1 bg-white/8" />
+              <span className="font-mono text-[0.62rem] text-mist-500">
+                {data?.kpis.interventions24h ?? 0} in the last 24 h · ledger ai_decisions
+              </span>
+            </div>
+            <InterventionHistory decisions={data?.decisions ?? []} />
+          </div>
         </CardBody>
       </Card>
 
@@ -353,7 +483,7 @@ export function OperatorDashboard() {
               mode={mode}
               onModeChange={setMode}
               selectedRoute={routeFilter}
-              onSelectRoute={setRouteFilter}
+              onSelectRoute={handleSelectRoute}
               className="mt-3"
             />
           )}

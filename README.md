@@ -140,6 +140,7 @@ Data Explorer's **Rebuild dataset** button (`POST /api/dataset/refresh`).
 | `rider_profiles`, `watchlist` | Rider preferences, role and saved journeys |
 | `route_searches`, `route_search_options` | Every planner run — operator demand data is real |
 | `model_config` | Model metadata, planner weights and service targets (tunable without a deploy) |
+| `ai_decisions`, `ai_decision_actions` | The AI decision ledger — every intervention an operator applied, its numbered actions and the relief each one was projected to produce |
 
 Analytical work lives in SQL so the API and any BI tool see identical numbers:
 
@@ -147,6 +148,7 @@ Analytical work lives in SQL so the API and any BI tool see identical numbers:
 * `v_line_hourly_profile`, `v_line_hourly_profile_all_stops` — learned 14-day baselines
 * `v_latest_crowd_reading`, `v_line_crowding_now` — live occupancy per line/stop
 * `v_operator_line_load`, `v_network_summary` — operator rollups
+* `v_ai_interventions` — each decision joined to the vehicle it released and the alert it raised
 * `fn_next_departures(stop, from, horizon)` — expands the timetable, direction-aware
 * `fn_line_segments(line, from_seq, to_seq)` — ordered stops with running ETA
 * `fn_crowd_level(ratio)` — the green/yellow/orange/red bucket used everywhere
@@ -163,7 +165,7 @@ npm run db:verify
 ```
 
 ```
-[db] verification — 52/52 checks passed
+[db] verification — 59/59 checks passed
   ✓ columns routes — 8 columns            ✓ foreign keys vehicle_snapshots — 2 fk
   ✓ primary key routes                    ✓ indexes occupancy_predictions — 6 index(es)
   ✓ routes ≥ 6 rows — 6 rows              ✓ all three roles present — admin, commuter, operator
@@ -173,7 +175,11 @@ npm run db:verify
   ✓ crowd penalty rises with occupancy — 30%→2.400 · 70%→8.800 · 100%→24.066 min
   ✓ weather_conditions seeded (prediction input) — 72 slots, current clear
   ✓ weather has a forecast window ahead — 65 future slots
-  ✓ view v_stops — 32 rows …              ✓ tables marked as DEMO DATA — 7/7
+  ✓ AI decisions seeded (intervention ledger) — 2 rows, 2 applied
+  ✓ applied decisions reference an alert and a vehicle — 2 alert(s), 2 vehicle(s)
+  ✓ AI decision actions recorded — 5 actions across 3 kinds
+  ✓ intervention never projected worse than the forecast
+  ✓ view v_ai_interventions — 2 rows    ✓ tables marked as DEMO DATA — 7/7
 ```
 
 ---
@@ -185,7 +191,7 @@ npm run db:verify
 | **1. Commuter dashboard** | `/` | *Know the crowd before you board.* — From / To / Departure time and one **Find Best Route** button, above the next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys and active alerts. |
 | **2. Route results** | `/routes` | Which option should I take? *AI analyzing routes…* while the planner runs, then one card per option: route number and name, travel time, waiting time, predicted occupancy, crowd level, AI confidence and a comfort indicator — clearly badged **AI Recommended**, **Fastest Route** and **Least Crowded Route**, with **Why this route?** expanding to `travel + waiting + crowd penalty = route score`. |
 | **3. Route details** | `/routes/details` | Is this really the best choice? Occupancy prediction with AI confidence and crowd trend, leg-by-leg boarding plan, estimated arrival per leg, forecast chart, model factor breakdown, score arithmetic (`/routes/details` keeps the trade-off tab) and alternative routes with what each one avoids. |
-| **4. Operator Command Center** | `/operator` | What needs attention in the next hour? A live status bar (clock, network state, model), the **network overview** (active routes, active vehicles, high-crowd routes, average network occupancy), **live route status** for every route (occupancy, crowd band, forecast, vehicles, operating status), a schematic **crowd heatmap** with live / +30 min / 24 h-peak views, the **AI alert feed** (route, predicted occupancy, ETA, severity, recommended action), **AI recommendations** (deploy a vehicle, redirect passengers, tighten headway, fleet readiness — each with evidence, expected impact and a one-click *Dispatch* that publishes the advisory into `alerts`), and **route analytics** (measured → predicted trend per route, current vs forecast). |
+| **4. Operator Command Center** | `/operator` | What needs attention in the next hour? A live status bar (clock, network state, model), the **network overview** (active routes, active vehicles, high-crowd routes, average network occupancy), **live route status** for every route (occupancy, crowd band, forecast, vehicles, operating status), a schematic **crowd heatmap** with live / +30 min / 24 h-peak views, the **AI alert feed** (route, predicted occupancy, ETA, severity, recommended action), **AI recommendations** (deploy a vehicle, redirect passengers, tighten headway, fleet readiness — each with evidence, expected impact and a one-click *Dispatch* that publishes the advisory into `alerts`), and **route analytics** (measured → predicted trend per route, current vs forecast). Select any route to open the **AI Decision console**: *AI Detected Congestion* (current vs predicted occupancy, time to congestion, engine scan curve), *AI Recommended Action* (numbered plays with evidence), the **expected impact** bars (without intervention → with intervention, labelled as a simulated projection) and the **Apply AI Recommendation** button that writes the ledger, releases a vehicle and raises the alert. |
 | **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
 | **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
 | **7. Prediction engine** | `/engine` | How does the AI actually decide? The five-stage pipeline, the input catalogue, the crowd-classification table (48% → Low, 72% → Moderate, 91% → High) and a live simulator: pick a route, horizon and weather scenario and watch the predicted occupancy, crowd level, confidence and per-factor contribution recompute from the API. |
@@ -281,6 +287,37 @@ Each run is persisted to `route_searches` / `route_search_options`, which is why
 the operator command centre's demand panel and "crowding avoided by routing" KPI
 are real aggregates rather than illustrative numbers.
 
+### The AI decision loop (detect → recommend → apply)
+
+`server/services/ai-decision.ts` is the operator's version of the same question —
+*a route is about to crowd; what do we do about it, and what happens if we do?*
+
+1. **Detect.** The engine scans the route's busiest monitored stop forward in
+   15-minute steps to **+180 min** at `GET /api/operator/ai-decision?line=…` and
+   reports the first crossing of the crowding threshold. When nothing crosses, it
+   reads the route's recurring peak window from the 14-day profile
+   (`v_line_hourly_profile`) and evaluates the engine *at that future instant* —
+   so late at night the console still shows tomorrow's crush-load risk instead of
+   an empty panel.
+2. **Recommend.** The numbered actions are composed from real rows: a reserve unit
+   from `vehicles` (idle first, then maintenance, else a depot spare), the quietest
+   corridor that shares a stop with this route, and a rider advisory whose reach
+   comes from `stops.daily_boardings`. Each action carries its own evidence chips.
+3. **Project.** Relief compounds — every action removes a share of the *remaining*
+   peak load, so the table adds up:
+   `with = without × (1 − deploy) × (1 − redirect) × (1 − notify)`.
+4. **Apply.** *Apply AI Recommendation* makes a single `POST` that, inside one
+   transaction, writes `ai_decisions` + `ai_decision_actions`, releases the
+   **vehicle** onto the route (`status='in_service'`, new `line_id`), raises a
+   rider-facing row in **`alerts`**, then the console refetches the command centre
+   so the KPI tiles, route table and alert feed all move together. A 10-minute
+   cooldown stops a double press; *Re-assess* recomputes the route with the extra
+   vehicle already in service.
+
+Every figure is a **simulated projection** over the synthetic demo dataset — the
+console labels it as such, the ledger stores the method string, and no production
+accuracy is claimed.
+
 If a rider plans a journey after the last departure of the day, the planner rolls
 the search forward to the **next service window** (read from `service_patterns`
 in the agency timezone) and returns those itineraries with a `serviceNote`,
@@ -304,7 +341,9 @@ instead of dead-ending on an empty screen.
 | `GET` | `/api/prediction/engine` | Pipeline stages, input catalogue, crowd classes, engine descriptor, simulated weather |
 | `GET` | `/api/prediction/weather` | Simulated weather slots and the demand multiplier behind each condition |
 | `GET\|POST\|PATCH\|DELETE` | `/api/alerts` (`/:id`) | List, publish, resolve/reopen, retract |
-| `GET` | `/api/operator/command-center` | The whole command centre: network KPIs, live route status, heatmap geometry + load, AI alerts, AI recommendations and route analytics |
+| `GET` | `/api/operator/command-center` | The whole command centre: network KPIs, live route status, heatmap geometry + load, AI alerts, AI recommendations, route analytics and the intervention ledger |
+| `GET` | `/api/operator/ai-decision` | The AI decision for one route: detected congestion, numbered actions, expected impact, engine scan curve |
+| `POST` | `/api/operator/ai-decision/apply` | Applies a recommendation — decision ledger + vehicle release + rider alert in one transaction |
 | `GET` | `/api/operator/overview\|fleet\|line-load\|demand\|config` | Supporting control-room analytics |
 | `GET\|PATCH` | `/api/profile` | Rider preferences |
 | `GET\|POST` | `/api/watchlist` (`/:id`, `/:id/toggle`) | Saved journeys |
@@ -374,12 +413,24 @@ Errors always come back as `{ "error": { "message", "code", "details?" } }`.
    recommendations** propose the interventions with the numbers behind them —
    press **Dispatch** and the advisory is written into the `alerts` table.
    **Route analytics** closes the loop with measured → predicted trends.
+   Now click a route in the live table — the **AI Decision console** opens with
+   *AI Detected Congestion*: current occupancy, predicted occupancy, time to
+   congestion and the engine's scan curve against the threshold. Read the three
+   numbered actions (deploy a vehicle, redirect passengers, notify riders), then
+   the **expected impact** bars: *without intervention* vs *with recommended
+   intervention*, explicitly labelled a simulated projection. Press **Apply AI
+   Recommendation** — the check animates, the console lists what changed (unit
+   released, alert raised, ledger rows written) and the KPI tiles above move:
+   active vehicles, idle units and open notices all shift because the database
+   really changed.
 7. **Alerts** — publish a crowding notice; it appears instantly for riders, and it
    lands in the `alerts` table (and in `service_alerts` after a dataset refresh).
 8. **Database** — open the Data Explorer: real row counts, primary/foreign keys and
    records for `routes`, `route_stops`, `vehicle_snapshots`,
-   `occupancy_predictions`, `route_options`, `service_alerts` and `app_users` — then
-   press **Rebuild dataset** and show the counts recomputed from the model.
+   `occupancy_predictions`, `route_options`, `service_alerts` and `app_users` —
+   plus the AI intervention ledger (`ai_decisions`, `ai_decision_actions`) that
+   grew when you pressed Apply — then press **Rebuild dataset** and show the
+   counts recomputed from the model.
 9. **Settings** — drag crowd tolerance down and re-plan: the planner penalises busy
    carriages harder.
 

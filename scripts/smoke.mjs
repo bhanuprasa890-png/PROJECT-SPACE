@@ -148,6 +148,16 @@ const ROUTES = [
       'Simulation Mode',
       'MTC 21G',
       'Tambaram',
+      // AI Decision console — detection, actions, projection and the apply flow.
+      'AI decision console',
+      'AI Decision',
+      'Time to congestion',
+      'AI Recommended Action',
+      'Apply AI Recommendation',
+      'Without intervention',
+      'With recommended intervention',
+      'Simulated projection',
+      'Interventions applied',
     ],
   },
   {

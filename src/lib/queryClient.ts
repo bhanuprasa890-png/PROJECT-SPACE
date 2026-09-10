@@ -31,6 +31,7 @@ export const queryKeys = {
   watchlist: (profileId?: string) => ['watchlist', profileId ?? 'default'] as const,
   lineLoad: (dayType: string) => ['operator', 'line-load', dayType] as const,
   commandCenter: ['operator', 'command-center'] as const,
+  aiDecision: (lineIdOrCode: string) => ['operator', 'ai-decision', lineIdOrCode] as const,
   config: ['operator', 'config'] as const,
   predictionEngine: ['prediction', 'engine'] as const,
   predictionRoutes: ['prediction', 'routes'] as const,

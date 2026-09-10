@@ -18,6 +18,9 @@ export type DayType = 'weekday' | 'saturday' | 'sunday';
  */
 export type CrowdLevel = 'low' | 'moderate' | 'high';
 
+/** Fleet state of a vehicle row in `vehicles`. */
+export type VehicleStatus = 'in_service' | 'maintenance' | 'idle';
+
 /** Rider-facing read of predicted crowding, shown as the comfort indicator. */
 export type ComfortLevel = 'comfortable' | 'standing' | 'packed';
 
@@ -357,7 +360,7 @@ export interface FleetVehicle {
   lineCode: string;
   lineColor: string;
   mode: TransitMode;
-  status: 'in_service' | 'maintenance' | 'idle';
+  status: VehicleStatus;
   capacity: number;
   headcount: number;
   ratio: number;
@@ -762,6 +765,8 @@ export interface CommandKpis {
   predictedOccupancyPct: number;
   passengersOnboard: number;
   networkCapacity: number;
+  /** AI interventions applied from the console in the last 24 hours. */
+  interventions24h: number;
   status: 'nominal' | 'elevated' | 'critical';
   statusDetail: string;
 }
@@ -801,6 +806,8 @@ export interface CommandRouteRow {
   activeAlerts: number;
   majorAlerts: number;
   alertsLastHour: number;
+  /** Set when an AI intervention has already been applied to this route today. */
+  activeIntervention: RouteIntervention | null;
 }
 
 export interface HeatmapStop {
@@ -919,6 +926,163 @@ export interface CommandCenter {
   alerts: AiAlert[];
   recommendations: AiRecommendation[];
   analytics: { network: RouteAnalyticsPoint[]; routes: RouteAnalytics[] };
+  /** Interventions applied from the console, newest first. */
+  decisions: AiInterventionSummary[];
   crowdingThresholdPct: number;
   refreshSeconds: number;
+}
+
+/* -------------------------------------------------------------------------- */
+/* AI Decision console — detect → recommend → apply                           */
+/* -------------------------------------------------------------------------- */
+
+/** The numbered interventions the engine can propose and the console can apply. */
+export type AiActionKey =
+  | 'deploy_vehicle'
+  | 'redirect_passengers'
+  | 'notify_passengers'
+  | 'tighten_headway';
+
+export interface AiActionPlan {
+  key: AiActionKey;
+  /** 1-based position in the "AI RECOMMENDED ACTION" list. */
+  order: number;
+  title: string;
+  detail: string;
+  /** Share of the *remaining* peak load this action removes (0–1). */
+  reliefFraction: number;
+  /** Ratio points it removes at the forecast peak, so the impact table adds up. */
+  expectedReliefPct: number;
+  evidence: { label: string; value: string }[];
+  /** The row this action touches when applied (vehicle, corridor, advisory). */
+  targetLabel: string | null;
+  /** True once the action has been written to the database. */
+  applied: boolean;
+}
+
+export interface AiImpactProjection {
+  /** Forecast peak at the congestion instant, no action taken. */
+  withoutPct: number;
+  /** The same instant once the recommended actions compound. */
+  withPct: number;
+  reliefPct: number;
+  withoutLevel: CrowdLevel;
+  withLevel: CrowdLevel;
+  /** Riders no longer forecast to travel above the crowding threshold. */
+  passengersEased: number;
+  targetAt: string;
+  stopName: string | null;
+  /** The documented combination rule, rendered next to the projection. */
+  method: string;
+  /** Engine scan behind the projection: minutes from now → predicted load. */
+  scan: { minutes: number; ratio: number }[];
+}
+
+export interface AiDecisionProposal {
+  /** Stable id of the proposal — the route plus the congestion instant. */
+  id: string;
+  status: 'proposed' | 'applied';
+  lineId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  mode: TransitMode;
+  detectedAt: string;
+  /** `congestion` when the route crosses the threshold, `watch` when it only peaks. */
+  kind: 'congestion' | 'watch';
+  headline: string;
+  detectionNote: string;
+  /** How the congestion instant was found. */
+  basis: 'live' | 'forecast' | 'profile';
+  basisLabel: string;
+  /** Minutes until the forecast crosses the threshold (null = no crossing in the scan). */
+  minutesToCongestion: number | null;
+  horizonMinutes: number;
+  currentPct: number;
+  currentLevel: CrowdLevel;
+  predictedPct: number;
+  predictedLevel: CrowdLevel;
+  thresholdPct: number;
+  confidencePct: number;
+  headcount: number;
+  capacityPerVehicle: number;
+  vehiclesInService: number;
+  /** Reserve units the engine could deploy (idle first, then maintenance). */
+  reserveVehicles: number;
+  stop: { stopId: string; name: string } | null;
+  actions: AiActionPlan[];
+  impact: AiImpactProjection;
+  engine: string;
+  disclaimer: string;
+  simulated: true;
+  generatedAt: string;
+}
+
+/** What applying a decision changed — read back from the database afterwards. */
+export interface AiDecisionEffects {
+  vehicle: {
+    id: string;
+    code: string;
+    created: boolean;
+    previousStatus: VehicleStatus | null;
+    previousLineCode: string | null;
+    lineCode: string;
+  } | null;
+  alert: { id: string; title: string; severity: AlertSeverity; category: AlertCategory };
+  decisionId: string;
+  before: NetworkSnapshot;
+  after: NetworkSnapshot;
+}
+
+export interface NetworkSnapshot {
+  activeVehicles: number;
+  maintenanceVehicles: number;
+  idleVehicles: number;
+  openAlerts: number;
+  averageOccupancyPct: number;
+}
+
+export interface AiInterventionSummary {
+  id: string;
+  lineId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  status: 'applied' | 'reverted';
+  detectedAt: string;
+  appliedAt: string | null;
+  targetAt: string;
+  minutesToCongestion: number | null;
+  currentPct: number;
+  predictedPct: number;
+  projectedPct: number;
+  reliefPct: number;
+  confidencePct: number;
+  actionKeys: AiActionKey[];
+  actionCount: number;
+  vehicleId: string | null;
+  vehicleCode: string | null;
+  alertId: string | null;
+  alertTitle: string | null;
+  appliedBy: string | null;
+  note: string | null;
+  simulated: true;
+}
+
+/** One row per route: the intervention already applied to that route today. */
+export interface RouteIntervention {
+  id: string;
+  appliedAt: string;
+  withoutPct: number;
+  projectedPct: number;
+  reliefPct: number;
+  actionCount: number;
+  vehicleCode: string | null;
+  alertId: string | null;
+}
+
+export interface AiDecisionApplyResult {
+  decision: AiDecisionProposal;
+  intervention: AiInterventionSummary;
+  effects: AiDecisionEffects;
 }

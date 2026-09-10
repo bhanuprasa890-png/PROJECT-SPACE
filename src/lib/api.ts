@@ -1,4 +1,6 @@
 import type {
+  AiDecisionApplyResult,
+  AiDecisionProposal,
   Alert,
   AlertStatus,
   DatasetOverview,
@@ -101,6 +103,13 @@ const query = (params: Record<string, string | number | boolean | undefined | nu
 /* -------------------------------------------------------------------------- */
 /* Health + network                                                           */
 /* -------------------------------------------------------------------------- */
+
+/** `GET /api/operator/ai-decision` — the proposal plus the simulation flag. */
+export interface AiDecisionPayload {
+  decision: AiDecisionProposal;
+  simulated: true;
+  generatedAt: string;
+}
 
 export interface HealthPayload extends HealthReport {
   uptimeSeconds: number;
@@ -288,6 +297,19 @@ export const api = {
     request<Alert>(`/alerts/${alertId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   deleteAlert: (alertId: string) => request<void>(`/alerts/${alertId}`, { method: 'DELETE' }),
+
+  /* ----------------------------------------------------------- AI decision */
+
+  /** The AI decision for one route — detection, numbered actions, projection. */
+  aiDecision: (lineIdOrCode: string) =>
+    request<AiDecisionPayload>(`/operator/ai-decision${query({ line: lineIdOrCode })}`),
+
+  /** Apply the recommendation: ledger row, vehicle release and rider alert. */
+  applyAiDecision: (input: { lineId: string; appliedBy?: string; force?: boolean }) =>
+    request<AiDecisionApplyResult>('/operator/ai-decision/apply', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 
   /* ------------------------------------------------------------- prediction */
 

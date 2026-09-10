@@ -249,6 +249,35 @@ export function useCommandCenter(refetchIntervalMs = 60_000) {
   });
 }
 
+/**
+ * The AI decision behind one route. Disabled when no route is selected, and
+ * refreshed with the console's own cadence so the projection does not drift.
+ */
+export function useAiDecision(lineIdOrCode: string | null, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.aiDecision(lineIdOrCode ?? ''),
+    queryFn: () => api.aiDecision(lineIdOrCode as string),
+    enabled: Boolean(lineIdOrCode) && enabled,
+    staleTime: 20_000,
+    retry: false,
+  });
+}
+
+/** Apply the AI recommendation — writes the ledger, a vehicle move and an alert. */
+export function useApplyAiDecision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { lineId: string; appliedBy?: string; force?: boolean }) =>
+      api.applyAiDecision(input),
+    onSuccess: () => {
+      // The command centre is recomputed from Postgres, so the KPIs, route table,
+      // heatmap and alerts all move together after an intervention.
+      void queryClient.invalidateQueries({ queryKey: ['operator'] });
+      void queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    },
+  });
+}
+
 export function useOperatorOverview(windowHours = 24) {
   return useQuery({
     queryKey: queryKeys.operator(windowHours),
