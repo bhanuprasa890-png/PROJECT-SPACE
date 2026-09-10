@@ -2,6 +2,7 @@ import { AlertTriangle, Inbox, RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from './Button';
+import { describeApiError } from './ApiStatus';
 
 /**
  * Loading + empty + error states.
@@ -180,15 +181,29 @@ export function ErrorState({
   title = 'Something went wrong',
   message,
   details,
+  hint,
+  error,
   onRetry,
   className,
 }: {
   title?: string;
   message?: string;
   details?: string;
+  hint?: string;
+  /**
+   * The thrown error itself. When supplied, the panel explains the cause for the
+   * reader (API unreachable / database read failed / bad request) and keeps the
+   * API status + code for debugging — rather than showing a raw exception string.
+   */
+  error?: unknown;
   onRetry?: () => void;
   className?: string;
 }) {
+  const described = error === undefined ? null : describeApiError(error);
+  const body = message ?? described?.message;
+  const note = hint ?? described?.hint;
+  const code = details ?? described?.details;
+
   return (
     <div
       role="alert"
@@ -201,10 +216,11 @@ export function ErrorState({
         <AlertTriangle className="size-4" aria-hidden />
         <p className="font-display text-sm font-semibold">{title}</p>
       </div>
-      {message ? <p className="text-xs leading-relaxed text-mist-300">{message}</p> : null}
-      {details ? (
+      {body ? <p className="text-xs leading-relaxed text-mist-200">{body}</p> : null}
+      {note ? <p className="text-2xs leading-relaxed text-mist-400">{note}</p> : null}
+      {code ? (
         <p className="figure rounded-lg border border-white/8 bg-ink-950/60 px-2.5 py-1.5 text-3xs text-mist-400">
-          {details}
+          {code}
         </p>
       ) : null}
       {onRetry ? (

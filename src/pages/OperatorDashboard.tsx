@@ -8,6 +8,7 @@ import {
   FlaskConical,
   Gauge,
   History,
+  Loader2,
   MapPinned,
   RefreshCw,
   Siren,
@@ -26,7 +27,15 @@ import { ApiError } from '../lib/api';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge, StatusDot } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { EmptyState, PanelSkeleton } from '../components/ui/Skeleton';
+import {
+  ApiStatusBanner,
+  ErrorPanel,
+  describeApiError,
+  useLastError,
+  useOutageDuration,
+} from '../components/ui/ApiStatus';
+import { retryFailedQueries } from '../lib/queryClient';
 import { SectionHeading } from '../components/ui/Section';
 import { NetworkHeatmap, type HeatmapMode } from '../components/operator/NetworkHeatmap';
 import { OperatorNetworkMap } from '../components/map/OperatorNetworkMap';
@@ -113,12 +122,87 @@ export function OperatorDashboard() {
     return filtered.length ? filtered : data.analytics.routes;
   }, [data, routeFilter]);
 
-  if (command.isError) {
+  /*
+   * Every hook must run before any early return below: React matches hooks by call
+   * order, so returning early and then calling this one on a later render is a
+   * "change in the order of Hooks" error. It fires the moment the console recovers
+   * from an error state, which is exactly when the data finally arrives.
+   */
+  /** An intervention already applied to the focused route (from the payload). */
+  const focusIntervention = useMemo(() => {
+    if (!data || !decisionRoute) return null;
+    if (applied?.intervention.routeNumber === decisionRoute) return null;
+    return data.routes.find((route) => route.routeNumber === decisionRoute)?.activeIntervention ?? null;
+  }, [data, decisionRoute, applied]);
+
+  /*
+   * Error state — the same contract as the rider dashboard: name the cause, keep
+   * the API code, and retry every failing query so the whole console (map, KPIs,
+   * decision engine) comes back together. `outage` gives the automatic retries a
+   * few seconds first and only then commits to the panel, so a brief restart is
+   * invisible; `lastError` remembers the cause while a retry is in flight.
+   */
+  const outage = useOutageDuration(!data);
+  const lastError = useLastError(command.error);
+
+  if (command.isError || (outage && !data)) {
+    const described = describeApiError(lastError);
     return (
-      <ErrorState
-        title="Control room feed unavailable"
-        message={(command.error as Error).message}
-        onRetry={() => void command.refetch()}
+      <div className="space-y-4">
+        <ErrorPanel
+          title="Control room feed unavailable"
+          message={described.message}
+          hint={described.hint}
+          details={described.details}
+          onRetry={() => {
+            void command.refetch();
+            void retryFailedQueries();
+          }}
+        />
+        <ApiStatusBanner />
+      </div>
+    );
+  }
+
+  // First load: named loading state rather than three silent skeletons.
+  if (!data) {
+    return (
+      <div className="space-y-4">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-2.5"
+        >
+          <Loader2 className="size-4 animate-spin text-pulse-400" aria-hidden />
+          <div>
+            <p className="text-xs font-medium text-mist-100">Loading dashboard data…</p>
+            <p className="mt-0.5 text-3xs text-mist-500">
+              Aggregating routes, vehicles, occupancy predictions and alerts from the database
+            </p>
+          </div>
+        </div>
+        <PanelSkeleton rows={6} />
+      </div>
+    );
+  }
+
+  // Connected, but the dataset has no rows: say so instead of rendering empty cards.
+  if (data && data.routes.length === 0) {
+    return (
+      <EmptyState
+        icon={<BusFront className="size-5" />}
+        title="No transportation data available yet"
+        description="The database is connected but the demo dataset is empty. Run `npm run db:reset` (with the API stopped) or press Rebuild dataset on the Database screen, then reload."
+        action={
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<RefreshCw className="size-3.5" />}
+            onClick={() => void retryFailedQueries()}
+          >
+            Check again
+          </Button>
+        }
       />
     );
   }
@@ -206,15 +290,6 @@ export function OperatorDashboard() {
       current && current.intervention.routeNumber === routeNumber ? current : null,
     );
   };
-
-  /** An intervention already applied to the focused route (from the payload). */
-  const focusIntervention = useMemo(() => {
-    if (!data || !decisionRoute) return null;
-    if (applied?.intervention.routeNumber === decisionRoute) return null;
-    return (
-      data.routes.find((route) => route.routeNumber === decisionRoute)?.activeIntervention ?? null
-    );
-  }, [data, decisionRoute, applied]);
 
   const routesShown = data && routeFilter
     ? data.routes.filter((route) => route.routeNumber === routeFilter)

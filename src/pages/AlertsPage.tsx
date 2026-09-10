@@ -145,7 +145,7 @@ export function AlertsPage() {
             </div>
 
             {isError ? (
-              <ErrorState message={(error as Error)?.message} onRetry={() => void refetch()} />
+              <ErrorState error={error} onRetry={() => void refetch()} />
             ) : isLoading ? (
               <PanelSkeleton rows={5} />
             ) : data?.alerts.length ? (

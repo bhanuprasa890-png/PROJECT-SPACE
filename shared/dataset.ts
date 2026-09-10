@@ -158,8 +158,44 @@ export const DATASET_TABLES: DatasetTableDef[] = [
 
 export const DATASET_TABLE_NAMES: readonly string[] = DATASET_TABLES.map((table) => table.name);
 
+/**
+ * Canonical ("requested as") aliases → the physical relation that serves them.
+ *
+ * Several canonical names are served by both a table and its published view
+ * (`stops` → `route_stops` / `v_stops`), so the table wins: a client asking for
+ * the published schema gets the writable source of truth, and the views stay
+ * available under their own names.
+ */
+export const DATASET_TABLE_ALIASES: Record<string, string> = DATASET_TABLES.reduce<Record<string, string>>(
+  (aliases, table) => {
+    const current = aliases[table.requestedAs];
+    if (current === undefined) {
+      aliases[table.requestedAs] = table.name;
+      return aliases;
+    }
+    const currentDef = DATASET_TABLES.find((candidate) => candidate.name === current);
+    if (currentDef?.kind === 'view' && table.kind === 'table') aliases[table.requestedAs] = table.name;
+    return aliases;
+  },
+  {},
+);
+
+/**
+ * Resolve a table name to its definition.
+ *
+ * Accepts both the physical table name (`route_stops`, `vehicle_snapshots`,
+ * `service_alerts`, `app_users`) and the canonical name from the published
+ * route-level schema (`stops`, `vehicles`, `alerts`, `users`) — the same names
+ * the API already advertises in `requestedAs`. Without this, a client that asks
+ * for `stops` — which the dataset itself says is the published name — got
+ * `DATASET_TABLE_NOT_FOUND`.
+ */
 export function findDatasetTable(name: string): DatasetTableDef | undefined {
-  return DATASET_TABLES.find((table) => table.name === name);
+  const direct = DATASET_TABLES.find((table) => table.name === name);
+  if (direct) return direct;
+
+  const aliased = DATASET_TABLE_ALIASES[name];
+  return aliased ? DATASET_TABLES.find((table) => table.name === aliased) : undefined;
 }
 
 /** Row counts every canonical table must reach for the demo dataset to be complete. */

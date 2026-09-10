@@ -18,7 +18,9 @@
     "smoke": "node scripts/smoke.mjs",
     "db:verify": "tsx server/scripts/db.ts verify",
     "db:refresh": "tsx server/scripts/db.ts refresh",
-    "smoke:maps": "SMOKE_MOCK_MAPS=1 node scripts/smoke.mjs"
+    "smoke:maps": "SMOKE_MOCK_MAPS=1 node scripts/smoke.mjs",
+    "check:api": "node scripts/check-api.mjs",
+    "check:recovery": "node scripts/check-recovery.mjs"
   },
   "repository": {
     "type": "git",

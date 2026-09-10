@@ -125,7 +125,7 @@ export function JourneyMap({
         <div className="grid h-full place-items-center p-4">
           <ErrorState
             title="Journey map unavailable"
-            message={(journey.error as Error).message}
+            error={journey.error}
             onRetry={() => void journey.refetch()}
           />
         </div>

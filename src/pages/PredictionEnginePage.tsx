@@ -206,7 +206,7 @@ export function PredictionEnginePage() {
     return (
       <ErrorState
         title="Could not load the prediction engine"
-        message={(engine.error as Error).message}
+        error={engine.error}
         onRetry={() => void engine.refetch()}
       />
     );
@@ -341,7 +341,7 @@ export function PredictionEnginePage() {
             {prediction.isError ? (
               <ErrorState
                 title="Prediction failed"
-                message={(prediction.error as Error).message}
+                error={prediction.error}
                 onRetry={() => void prediction.refetch()}
               />
             ) : !result ? (

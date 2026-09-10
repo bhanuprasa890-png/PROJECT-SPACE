@@ -173,7 +173,7 @@ export function RouteResults() {
       ) : plan.isError ? (
         <ErrorState
           title="Could not plan that journey"
-          message={(plan.error as Error).message}
+          error={plan.error}
           onRetry={() => void plan.refetch()}
         />
       ) : analyzing ? (

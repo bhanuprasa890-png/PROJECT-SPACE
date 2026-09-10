@@ -72,6 +72,7 @@ const ROUTES = [
     expect: [
       'Know the crowd',
       'Find Best Route',
+      'Live map',
       'Commuter Dashboard',
       'Busiest right now',
       'Saved journeys',
@@ -182,6 +183,8 @@ const ROUTES = [
       'AI alert',
       'AI action',
       'Apply AI recommendation',
+      // Vehicle locations live on the map surface itself.
+      'Network map',
     ],
   },
   {
