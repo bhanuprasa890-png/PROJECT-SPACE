@@ -1,58 +1,92 @@
-import { PLANNER_WEIGHT_LABELS, type ScoreKey } from '../../lib/scoring';
-import type { RouteOption } from '@shared/types';
 import { cn } from '../../lib/utils';
+import { ArrowRightLeft, Info } from 'lucide-react';
+import type { RouteOption } from '@shared/types';
+import { formatScore, SCORE_FORMULA, scoreShares } from '../../lib/scoring';
 
 /**
- * Shows how the planner's score was composed for an option — the transparent
- * "why this ranking" panel operators and judges ask for.
+ * "Why this route?" — the transparent score arithmetic:
+ *
+ *     travel time + waiting time + crowd penalty = route score
+ *
+ * Every number comes from the API (which computes it from the timetable and the
+ * crowd model); this component only lays the equation out.
  */
 export function ScoreBreakdown({
   option,
   compareTo,
   className,
+  compact = false,
 }: {
   option: RouteOption;
-  compareTo?: RouteOption;
+  /** Optional alternative to show the delta against (e.g. the recommended pick). */
+  compareTo?: RouteOption | null;
   className?: string;
+  compact?: boolean;
 }) {
-  const keys: ScoreKey[] = ['time', 'crowd', 'transfer', 'walk'];
-  const max = Math.max(
-    ...keys.map((key) => option.scoreBreakdown[key]),
-    ...(compareTo ? keys.map((key) => compareTo.scoreBreakdown[key]) : [0]),
-    1,
-  );
+  const shares = scoreShares(option);
+  const total = option.scoreBreakdown.totalScore;
+  const delta = compareTo ? Number((total - compareTo.scoreBreakdown.totalScore).toFixed(1)) : null;
 
   return (
     <div className={cn('space-y-3', className)}>
-      {keys.map((key) => {
-        const value = option.scoreBreakdown[key];
-        const other = compareTo?.scoreBreakdown[key];
-        return (
-          <div key={key} className="space-y-1.5">
-            <div className="flex items-baseline justify-between text-[0.72rem]">
-              <span className="text-mist-300">{PLANNER_WEIGHT_LABELS[key]}</span>
-              <span className="font-mono text-mist-400">{value.toFixed(1)} pts</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-pulse-500/70 to-pulse-300 transition-[width] duration-700"
-                style={{ width: `${(value / max) * 100}%` }}
-              />
-            </div>
-            {other !== undefined ? (
-              <p className="text-[0.65rem] text-mist-500">
-                Alternative: {other.toFixed(1)} pts
-                {other < value ? ' (cheaper)' : other > value ? ' (more expensive)' : ' (equal)'}
-              </p>
-            ) : null}
-          </div>
-        );
-      })}
-
-      <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-        <span className="text-[0.72rem] text-mist-300">Weighted total (lower is better)</span>
-        <span className="font-mono text-sm text-mist-100">{option.score.toFixed(1)}</span>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="font-mono text-[0.7rem] text-mist-400">{SCORE_FORMULA}</span>
+        <span className="font-mono text-[0.7rem] text-mist-600">= route score</span>
       </div>
+
+      {/* stacked bar: one segment per score term */}
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/8">
+        {shares.map(({ term, pct }) => (
+          <span
+            key={term.key}
+            className={cn('h-full transition-[width] duration-700 ease-out', term.bar)}
+            style={{ width: `${pct}%` }}
+            title={`${term.label} — ${formatScore(option.scoreBreakdown[term.key])}`}
+          />
+        ))}
+      </div>
+
+      <ul className={cn('grid gap-2', compact ? 'sm:grid-cols-3' : 'sm:grid-cols-3')}>
+        {shares.map(({ term, value, pct }) => (
+          <li
+            key={term.key}
+            className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2"
+            title={term.hint}
+          >
+            <p className="flex items-center gap-1.5 text-[0.65rem] tracking-wide text-mist-400 uppercase">
+              <span className={cn('size-1.5 rounded-full', term.bar)} />
+              {term.label}
+            </p>
+            <p className="mt-1 font-mono text-sm text-mist-100">{formatScore(value)}</p>
+            <p className="font-mono text-[0.6rem] text-mist-600">{pct}% of score</p>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-pulse-400/25 bg-pulse-400/8 px-3 py-2">
+        <span className="text-[0.7rem] font-medium text-pulse-100">Overall route score</span>
+        <span className="flex items-baseline gap-2">
+          {delta !== null && delta !== 0 && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 font-mono text-[0.7rem]',
+                delta < 0 ? 'text-crowd-low' : 'text-crowd-moderate',
+              )}
+            >
+              <ArrowRightLeft className="size-3" />
+              {delta > 0 ? '+' : ''}
+              {delta} min vs recommended
+            </span>
+          )}
+          <span className="font-mono text-base font-semibold text-mist-50">{formatScore(total)}</span>
+        </span>
+      </div>
+
+      <p className="flex items-start gap-1.5 text-[0.65rem] leading-relaxed text-mist-500">
+        <Info className="mt-0.5 size-3 shrink-0" />
+        Lower is better. Crowd penalty converts predicted crowding into extra minutes, weighted by your
+        crowd tolerance, so a comfortable ride can out-score a faster packed one.
+      </p>
     </div>
   );
 }

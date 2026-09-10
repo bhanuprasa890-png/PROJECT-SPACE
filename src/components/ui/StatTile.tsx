@@ -48,7 +48,7 @@ export function StatTile({
     : String(value);
 
   const Delta = deltaPct === undefined ? ArrowRight : deltaPct > 0.05 ? ArrowUpRight : deltaPct < -0.05 ? ArrowDownRight : ArrowRight;
-  const deltaTone = crowdTone(tone === 'positive' ? 'low' : tone === 'negative' ? 'critical' : 'moderate');
+  const deltaTone = crowdTone(tone === 'positive' ? 'low' : tone === 'negative' ? 'high' : 'moderate');
 
   return (
     <Card accent={accent === 'pulse' ? 'pulse' : accent === 'sky' ? 'sky' : accent === 'warning' ? 'warning' : accent === 'critical' ? 'critical' : 'none'} className={cn('p-4', className)}>

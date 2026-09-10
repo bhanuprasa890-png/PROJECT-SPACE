@@ -160,11 +160,14 @@ npm run db:verify
 ```
 
 ```
-[db] verification — 45/45 checks passed
+[db] verification — 48/48 checks passed
   ✓ columns routes — 8 columns            ✓ foreign keys vehicle_snapshots — 2 fk
   ✓ primary key routes                    ✓ indexes occupancy_predictions — 6 index(es)
   ✓ routes ≥ 6 rows — 6 rows              ✓ all three roles present — admin, commuter, operator
   ✓ occupancy_predictions ≥ 30 rows …     ✓ joined route/stop/vehicle/prediction query — 5 rows
+  ✓ route score is travel + waiting + crowd penalty — 0 drift (max 0)
+  ✓ shared bands: <60 low · 60-85 moderate · >85 high — 0.10=low 0.60=low 0.61=moderate …
+  ✓ crowd penalty rises with occupancy — 30%→2.400 · 70%→8.800 · 100%→24.066 min
   ✓ view v_stops — 32 rows …              ✓ tables marked as DEMO DATA — 7/7
 ```
 
@@ -174,9 +177,9 @@ npm run db:verify
 
 | Area | Route | What it answers |
 | --- | --- | --- |
-| **1. Commuter dashboard** | `/` | What should I do right now? Next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys with live crowd snapshots, active alerts. |
-| **2. Route results** | `/routes` | Which option should I take? Crowd-aware itineraries ranked by a tunable objective, with the busiest option called out so you can see what you avoid. |
-| **3. Route details** | `/routes/details` | Is this really the best choice? Leg-by-leg boarding plan, per-leg load, forecast chart, model factor breakdown, trade-off scores. |
+| **1. Commuter dashboard** | `/` | *Know the crowd before you board.* — From / To / Departure time and one **Find Best Route** button, above the next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys and active alerts. |
+| **2. Route results** | `/routes` | Which option should I take? *AI analyzing routes…* while the planner runs, then one card per option: route number and name, travel time, waiting time, predicted occupancy, crowd level, AI confidence and a comfort indicator — clearly badged **AI Recommended**, **Fastest Route** and **Least Crowded Route**, with **Why this route?** expanding to `travel + waiting + crowd penalty = route score`. |
+| **3. Route details** | `/routes/details` | Is this really the best choice? Occupancy prediction with AI confidence and crowd trend, leg-by-leg boarding plan, estimated arrival per leg, forecast chart, model factor breakdown, score arithmetic (`/routes/details` keeps the trade-off tab) and alternative routes with what each one avoids. |
 | **4. Operator dashboard** | `/operator` | How is the network performing? Fleet state, 24-hour load profiles, crowding hotspots, demand signals from real searches, service KPIs, system health. |
 | **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
 | **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
@@ -202,6 +205,22 @@ Every prediction reports its per-factor contribution in occupancy points, which 
 what the **Model breakdown** tab renders. Forecasts are written back into
 `crowd_forecasts`, so riders, operators and API consumers share one picture.
 
+### The three crowd bands
+
+`shared/crowd.ts` is the single source of truth, mirrored by
+`fn_crowd_level()` in Postgres so the API, the UI and a raw SQL query can never
+disagree:
+
+| Occupancy | Band | Colour | What it means for a rider |
+| --- | --- | --- | --- |
+| below 60% | **Low** | green | seats available, plenty of space |
+| 60% – 85% | **Moderate** | amber | most seats taken, standing room left |
+| above 85% | **High** | red | packed — standing only, consider another option |
+
+The same ratio also drives the **comfort indicator** on every route card
+(*Comfortable · Standing room · Packed*), so the card, the badge and the bar all
+tell one story.
+
 ### The recommendation engine
 
 `server/services/planner.ts`:
@@ -210,15 +229,28 @@ what the **Model breakdown** tab renders. Forecasts are written back into
    rider's transfer budget, including walking transfers between nearby stops).
 2. **Schedule** each sequence against the real timetable — direction-aware.
 3. **Predict** occupancy for every leg at the exact minute the rider is on board.
-4. **Score** with weights from `model_config.planner_weights`:
+4. **Score** each itinerary with one transparent, additive rule — the same one
+   the route cards show:
 
    ```
-   score = time·1.0 + crowdPenalty(load)·crowd·toleranceScale + transfers·4.5 + walk·1.6
+   route score = travel time + waiting time + crowd penalty
    ```
 
-5. **Label and explain**: the winner becomes `Recommended`, the remaining slots go
-   to the itineraries that win on time, crowding and changes, and insights are
-   generated from the data — including the *Optimize* nudge.
+   The crowd term is the occupancy curve expressed in **minute-equivalents**
+   (`shared/crowd.ts` ↔ `fn_crowd_penalty_minutes`), scaled by the rider's crowd
+   sensitivity, so a comfortable ride can out-score a faster packed one:
+
+   | Predicted occupancy | Band | Penalty |
+   | --- | --- | --- |
+   | below 60% | Low | nearly free (≈ 0.6 × ratio) |
+   | 60% – 85% | Moderate | climbs steadily (≈ 6–14 min) |
+   | above 85% | High | steep — a crush load costs more than a detour (14.8 min +) |
+
+5. **Label and explain**: the winner becomes **AI Recommended**, the remaining
+   slots go to the itineraries that win on time or crowding (**Fastest Route**,
+   **Least Crowded Route**), and `scoreExplanation` is generated from the stored
+   numbers — e.g. *"Score 48.7 min = 31 min travel + 12 min waiting + 5.7 min
+   crowd penalty (from 61% peak occupancy)"*.
 
 Each run is persisted to `route_searches` / `route_search_options`, which is why
 the operator dashboard's demand panel and "crowding avoided by routing" KPI are
@@ -277,15 +309,22 @@ Errors always come back as `{ "error": { "message", "code", "details?" } }`.
 
 ## 7. Demo script (3 minutes)
 
-1. **Dashboard** — point out the recommended departure for the rider's next saved
-   journey, "crowding avoided", live network pressure and departure boards showing
-   a *predicted* load per service.
-2. **Plan a journey** — `Tambaram → Tidel Park`, leave "Minimise crowding" on, search.
-3. **Route results** — the recommended option is compared with the busiest itinerary
-   on the corridor; the insight rail explains how much crowding was avoided. Tap a
-   re-plan shortcut and watch the numbers change.
-4. **Route details** — walk through the boarding plan, the forecast chart (measured
-   history → predicted band) and the model breakdown that shows *why*.
+1. **Home** — read the headline *"Know the crowd before you board."*, then pick a
+   saved journey chip (or `Tambaram` → `Tidel Park`) and press **Find Best Route**.
+2. **AI analyzing routes…** — the pipeline animates while the planner reads the
+   timetable, predicts a load for every leg and scores the options. For the
+   clearest demo, flip **Departure time** to *Leave at* `18:20` — the evening
+   peak, where the busiest services tip into the red **High** band.
+3. **Route results** — the **AI Recommended** card is emphasised and expanded. Point
+   at the four numbers (travel, waiting, predicted occupancy, AI confidence), the
+   comfort indicator, then open **Why this route?**: `travel + waiting + crowd
+   penalty = route score`, with the crowd penalty explaining *why* the
+   recommendation is not simply the fastest train. Compare with the **Fastest
+   Route** and **Least Crowded Route** cards — each shows its own arithmetic.
+4. **Route details** — the occupancy prediction card (peak %, AI confidence, crowd
+   trend up / down the line, score), then the leg-by-leg boarding plan with
+   estimated arrivals, the forecast chart (measured history → predicted band), the
+   model breakdown that shows *why*, and the alternative routes below.
 5. **Operator** — fleet state, the 24-hour load profile with both peaks, hotspots,
    and the demand panel proving riders are choosing quieter trips.
 6. **Alerts** — publish a crowding notice; it appears instantly for riders, and it

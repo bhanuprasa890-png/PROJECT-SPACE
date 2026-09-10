@@ -12,6 +12,7 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
+import { crowdLevelFromRatio } from '@shared/crowd';
 import type { FleetVehicle, LineLoadRow } from '@shared/types';
 import { useOperatorOverview, useHealth } from '../hooks/useTransitData';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
@@ -311,7 +312,7 @@ export function OperatorDashboard() {
                       <div className="mt-3 flex items-end gap-[3px]">
                         {line.hourlyProfile.map((value, hour) => {
                           const tone = crowdTone(
-                            value >= 1 ? 'critical' : value >= 0.8 ? 'high' : value >= 0.55 ? 'moderate' : 'low',
+                            crowdLevelFromRatio(value),
                           );
                           return (
                             <span
@@ -530,7 +531,7 @@ function LineLoadRow({ line }: { line: LineLoadRow }) {
       <div className="mt-3 flex items-end gap-[3px]">
         {line.hourlyProfile.map((value, hour) => {
           const tone = crowdTone(
-            value >= 1 ? 'critical' : value >= 0.8 ? 'high' : value >= 0.55 ? 'moderate' : 'low',
+            crowdLevelFromRatio(value),
           );
           return (
             <span

@@ -99,6 +99,8 @@ export function usePlan(params: {
   avoidCrowding?: boolean;
   maxTransfers?: number;
   enabled?: boolean;
+  /** Hold the request open for at least this long (animates the AI state). */
+  analyzeMs?: number;
 }) {
   const profileId = getActiveProfileId();
   const key = {
@@ -108,6 +110,7 @@ export function usePlan(params: {
     avoidCrowding: params.avoidCrowding,
     maxTransfers: params.maxTransfers,
     profileId,
+    analyzeMs: params.analyzeMs ?? 0,
   };
 
   return useQuery({
@@ -120,6 +123,7 @@ export function usePlan(params: {
         avoidCrowding: params.avoidCrowding,
         maxTransfers: params.maxTransfers,
         profileId,
+        analyzeMs: params.analyzeMs,
       }),
     enabled:
       (params.enabled ?? true) && Boolean(params.origin && params.destination) &&

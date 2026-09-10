@@ -65,17 +65,48 @@ const ROUTES = [
   {
     path: '/',
     name: 'Commuter dashboard',
-    expect: ['Commuter Dashboard', 'Busiest right now', 'Saved journeys', 'Tambaram', 'Network pressure'],
+    expect: [
+      'Know the crowd',
+      'Find Best Route',
+      'Commuter Dashboard',
+      'Busiest right now',
+      'Saved journeys',
+      'Tambaram',
+      'Network pressure',
+    ],
   },
   {
     path: '/routes?origin=STN-12&destination=STN-04&avoidCrowding=true&maxTransfers=1',
     name: 'Route results',
-    expect: ['crowd-aware option', 'Why this recommendation', 'Tambaram', 'Peak', 'Crowding scale'],
+    // Commuter flow: ranked options from the planner, the three recommendation
+    // badges, the explainable score and the shared crowd bands.
+    expect: [
+      'crowd-aware route',
+      'AI Recommended',
+      'Why this route?',
+      'Travel time',
+      'Waiting time',
+      'Crowd penalty',
+      'Overall route score',
+      'AI confidence',
+      'Why this recommendation',
+      'Crowding scale',
+      'Tambaram',
+    ],
   },
   {
     path: '/routes/details?origin=STN-12&destination=STN-04&lineId=LN-B12&stopId=STN-12',
     name: 'Route details',
-    expect: ['Boarding plan', 'Crowd forecast', 'Model breakdown', 'Tambaram'],
+    expect: [
+      'Boarding plan',
+      'Occupancy prediction',
+      'AI confidence',
+      'Crowd trend',
+      'Alternatives on this corridor',
+      'Crowd forecast',
+      'Model breakdown',
+      'Tambaram',
+    ],
   },
   {
     path: '/operator',

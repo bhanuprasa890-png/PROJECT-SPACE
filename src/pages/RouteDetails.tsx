@@ -31,6 +31,7 @@ import { ForecastChart } from '../components/crowd/ForecastChart';
 import { FactorBreakdown } from '../components/crowd/FactorBreakdown';
 import { LegTimeline } from '../components/route/LegTimeline';
 import { ScoreBreakdown } from '../components/route/ScoreBreakdown';
+import { OccupancyPredictionCard } from '../components/route/OccupancyPredictionCard';
 import { LivePill } from '../components/crowd/CrowdHotspotList';
 import { cn, crowdTone, formatClock, formatDuration, formatPercent } from '../lib/utils';
 
@@ -158,6 +159,8 @@ export function RouteDetails() {
                   <LegTimeline legs={option.legs} expanded />
                 </CardBody>
               </Card>
+
+              <OccupancyPredictionCard option={option} />
 
               <Segmented<DetailTab>
                 value={tab}
@@ -435,9 +438,19 @@ export function RouteDetails() {
                     <div className="mt-2 flex items-center gap-2">
                       <CrowdMeter ratio={candidate.crowdRisk} level={candidate.crowdRiskLevel} height="sm" className="flex-1" />
                       <span className="font-mono text-[0.68rem] text-mist-400">
-                        {formatPercent(candidate.crowdRisk)}
+                        {formatPercent(candidate.crowdRisk)} peak
                       </span>
                     </div>
+                    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.62rem] text-mist-500">
+                      <span>{candidate.routeNumber}</span>
+                      <span>arrives {formatClock(candidate.arriveAt)}</span>
+                      <span>{candidate.confidencePct}% confidence</span>
+                      {candidate.crowdingAvoidedPct > 5 ? (
+                        <span className="text-crowd-low">
+                          avoids {Math.round(candidate.crowdingAvoidedPct)}% crowding
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="mt-2 line-clamp-2 text-[0.68rem] leading-relaxed text-mist-400">
                       {candidate.headline}
                     </p>

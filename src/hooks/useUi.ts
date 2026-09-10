@@ -1,5 +1,38 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+/**
+ * Keeps a loading state on screen for at least `minimumMs` so short queries do
+ * not flash past in a demo (used by the "AI analyzing routes…" state).
+ */
+export function useMinimumLoading(active: boolean, minimumMs = 1600): boolean {
+  const [visible, setVisible] = useState(active);
+  const startedAt = useRef<number | null>(active ? performance.now() : null);
+
+  useEffect(() => {
+    if (active) {
+      startedAt.current = performance.now();
+      setVisible(true);
+      return;
+    }
+
+    if (startedAt.current === null) {
+      setVisible(false);
+      return;
+    }
+
+    const elapsed = performance.now() - startedAt.current;
+    const remaining = Math.max(0, minimumMs - elapsed);
+    const timer = window.setTimeout(() => {
+      startedAt.current = null;
+      setVisible(false);
+    }, remaining);
+
+    return () => window.clearTimeout(timer);
+  }, [active, minimumMs]);
+
+  return visible;
+}
+
 /** Debounces fast-changing inputs (stop search, sliders). */
 export function useDebouncedValue<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);

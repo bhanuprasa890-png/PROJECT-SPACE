@@ -49,6 +49,30 @@
   --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
   --animate-drift: drift 18s ease-in-out infinite;
   --animate-shimmer: shimmer 1.8s linear infinite;
+  --animate-ping-slow: ping-slow 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-pulse-soft: pulse-soft 1.8s ease-in-out infinite;
+}
+
+@keyframes ping-slow {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 
 @keyframes rise {

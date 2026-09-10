@@ -135,7 +135,7 @@ create table if not exists occupancy_predictions (
   predicted_occupancy_percentage numeric(5, 2) not null
                                  check (predicted_occupancy_percentage >= 0),
   crowd_level                    text not null
-                                 check (crowd_level in ('low', 'moderate', 'high', 'critical')),
+                                 check (crowd_level in ('low', 'moderate', 'high')),
   confidence_percentage          numeric(5, 2) not null
                                  check (confidence_percentage between 0 and 100),
   created_at                     timestamptz not null default now(),
@@ -156,7 +156,7 @@ create index if not exists occupancy_predictions_vehicle_idx
 comment on table occupancy_predictions is
   'DEMO DATA · Forecast occupancy per route/vehicle, produced by the crowd model from `crowd_forecasts`.';
 comment on column occupancy_predictions.crowd_level is
-  'Bucketed from the percentage with the shared thresholds: <55 low, <80 moderate, <100 high, otherwise critical.';
+  'Bucketed from the percentage with the shared three-band thresholds: <60 low, 60-85 moderate, above 85 high.';
 
 -- -----------------------------------------------------------------------------
 -- 5. route_options — scored itinerary alternatives per route

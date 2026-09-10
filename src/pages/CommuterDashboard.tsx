@@ -8,14 +8,20 @@ import {
   Bookmark,
   Clock,
   Gauge,
+  Route,
   ShieldCheck,
+  Sparkles,
   TrainFront,
   Trash2,
   Users,
 } from 'lucide-react';
 import type { DashboardStat, UpcomingDeparture, WatchlistItem } from '@shared/types';
 import { useDashboard, useDeleteWatchlistItem, useToggleWatchlistItem } from '../hooks/useTransitData';
-import { JourneyPlanner, type PlannerValues } from '../components/route/JourneyPlanner';
+import {
+  JourneyPlanner,
+  type PlannerValues,
+  type QuickJourney,
+} from '../components/route/JourneyPlanner';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -66,6 +72,25 @@ export function CommuterDashboard() {
     }));
   }, [data?.profile]);
 
+  // One-tap demo journeys, built from the rider's saved trips in the database.
+  const quickJourneys = useMemo<QuickJourney[]>(() => {
+    const items = data?.watchlist ?? [];
+    const seen = new Set<string>();
+    return items
+      .filter((item) => {
+        const key = `${item.originStopId}-${item.destinationStopId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 3)
+      .map((item) => ({
+        label: `${item.originStopName} → ${item.destinationStopName}`,
+        originStopId: item.originStopId,
+        destinationStopId: item.destinationStopId,
+      }));
+  }, [data?.watchlist]);
+
   const payload = useMemo(
     () =>
       values.departMode === 'now' || !values.departTime
@@ -100,19 +125,85 @@ export function CommuterDashboard() {
     (option) => option.id === nextJourney.planned.recommendedOptionId,
   );
 
+  const busiest = data?.stats.find((stat) => stat.key === 'busiest_line');
+  const alertsStat = data?.stats.find((stat) => stat.key === 'alerts');
+
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
-        <JourneyPlanner
-          values={values}
-          onChange={(patch) => setValues((previous) => ({ ...previous, ...patch }))}
-          onSubmit={submit}
-          quickPicks={data?.watchlist.map((item) => ({
-            id: item.originStopId,
-            name: item.originStopName,
-          }))}
-        />
+      {/* ------------------------------------------------------------- hero */}
+      <section className="relative overflow-hidden rounded-3xl border border-white/8 bg-gradient-to-br from-ink-900/85 via-ink-950/70 to-ink-900/30 p-5 sm:p-7">
+        <span className="pointer-events-none absolute -top-28 -right-24 size-72 rounded-full bg-pulse-400/10 blur-3xl" />
+        <span className="pointer-events-none absolute -bottom-32 -left-20 size-72 rounded-full bg-sky-400/10 blur-3xl" />
 
+        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:items-center">
+          <div className="space-y-4">
+            <span className="inline-flex items-center gap-2 rounded-full border border-pulse-400/30 bg-pulse-400/10 px-3 py-1 text-[0.65rem] font-medium tracking-wide text-pulse-200 uppercase">
+              <Sparkles className="size-3" />
+              Live crowd forecasting · {data?.model ? `model ${data.model.version}` : 'TransitPulse AI'}
+            </span>
+
+            <h1 className="font-display text-3xl leading-[1.1] font-semibold tracking-tight text-mist-50 sm:text-4xl">
+              Know the crowd <span className="text-pulse-300">before you board.</span>
+            </h1>
+
+            <p className="max-w-xl text-sm leading-relaxed text-mist-300">
+              Tell TransitPulse where you are going. It predicts how full every option will be at
+              your departure time, then recommends the route that keeps you comfortable — with the
+              numbers to prove it.
+            </p>
+
+            <ol className="grid gap-2 sm:grid-cols-3">
+              {[
+                { icon: Activity, title: 'Predict', text: 'Forecast occupancy per leg' },
+                { icon: ShieldCheck, title: 'Avoid', text: 'Skip the crowded services' },
+                { icon: Route, title: 'Optimize', text: 'Score time vs crowding' },
+              ].map(({ icon: Icon, title, text }) => (
+                <li
+                  key={title}
+                  className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                >
+                  <span className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-mist-100">
+                    <Icon className="size-3.5 text-pulse-300" />
+                    {title}
+                  </span>
+                  <span className="mt-0.5 block text-[0.65rem] leading-relaxed text-mist-400">
+                    {text}
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem]">
+              <LivePill label="Telemetry" />
+              {busiest ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-2.5 py-1 text-mist-300">
+                  <Gauge className="size-3" />
+                  Busiest right now <span className="font-mono text-mist-100">{busiest.value}</span>
+                </span>
+              ) : null}
+              {alertsStat ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-2.5 py-1 text-mist-300">
+                  <BellRing className="size-3" />
+                  <span className="font-mono text-mist-100">{alertsStat.value}</span> active alerts
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <JourneyPlanner
+            values={values}
+            onChange={(patch) => setValues((previous) => ({ ...previous, ...patch }))}
+            onSubmit={submit}
+            quickJourneys={quickJourneys}
+            quickPicks={data?.watchlist.map((item) => ({
+              id: item.originStopId,
+              name: item.originStopName,
+            }))}
+          />
+        </div>
+      </section>
+
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
         <Card accent="pulse" className="flex flex-col">
           <CardHeader
             title={nextJourney ? nextJourney.label : 'No saved journey yet'}

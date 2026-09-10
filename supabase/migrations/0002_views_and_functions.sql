@@ -9,16 +9,36 @@
 -- -----------------------------------------------------------------------------
 -- Reusable scalar helpers
 -- -----------------------------------------------------------------------------
+-- Occupancy → crowd band. The same three bands are declared in
+-- `shared/crowd.ts`, so Postgres and the UI can never disagree:
+--   below 60% Low · 60–85% Moderate · above 85% High
 create or replace function fn_crowd_level(p_ratio numeric)
 returns text
 language sql
 immutable
 as $$
   select case
-    when coalesce(p_ratio, 0) >= 1.00 then 'critical'
-    when p_ratio >= 0.80 then 'high'
-    when p_ratio >= 0.55 then 'moderate'
+    when coalesce(p_ratio, 0) > 0.85 then 'high'
+    when p_ratio > 0.60 then 'moderate'
     else 'low'
+  end;
+$$;
+
+-- Crowd penalty curve in **minute-equivalents**, mirroring the same curve in
+-- `shared/crowd.ts`:
+--   Route score = travel time + waiting time + crowd penalty
+-- Low loads are nearly free, the penalty climbs steadily through the Moderate
+-- band and rises steeply past 85% where a crush load costs more than a detour.
+create or replace function fn_crowd_penalty_minutes(p_ratio numeric)
+returns numeric
+language sql
+immutable
+as $$
+  select case
+    when coalesce(p_ratio, 0) <= 0 then 0
+    when p_ratio <= 0.60 then round(p_ratio * 8, 3)
+    when p_ratio <= 0.85 then round(4.8 + (p_ratio - 0.60) * 40, 3)
+    else round(14.8 + power(p_ratio - 0.85, 1.35) * 120, 3)
   end;
 $$;
 
@@ -280,13 +300,23 @@ create or replace function fn_normalise_crowd_observation()
 returns trigger
 language plpgsql
 as $$
+declare
+  v_zone text;
 begin
+  -- Buckets are stored as local hours in the **agency** timezone so that
+  -- "hour 8" means 08:00 for riders — the same convention the crowd model uses
+  -- when it looks up a baseline (`fractionalHour(at, agencyTimezone)`).
+  -- Extracting the hour in the session timezone would silently shift every
+  -- learned baseline by the UTC offset of the network (5h30m for Asia/Kolkata).
+  select timezone into v_zone from agencies order by id limit 1;
+  v_zone := coalesce(v_zone, 'UTC');
+
   new.day_type := case
-    when extract(isodow from new.observed_at) = 6 then 'saturday'
-    when extract(isodow from new.observed_at) = 7 then 'sunday'
+    when extract(isodow from new.observed_at at time zone v_zone) = 6 then 'saturday'
+    when extract(isodow from new.observed_at at time zone v_zone) = 7 then 'sunday'
     else 'weekday'
   end;
-  new.hour_of_day := extract(hour from new.observed_at)::smallint;
+  new.hour_of_day := extract(hour from new.observed_at at time zone v_zone)::smallint;
   new.occupancy_ratio := round(new.onboard_count::numeric / nullif(new.capacity, 0), 3);
   return new;
 end;

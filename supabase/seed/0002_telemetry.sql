@@ -6,6 +6,11 @@
 -- a trailing high-frequency window so "live" panels always look fresh, and a
 -- forward forecast grid written by the (simulated) crowd model.
 --
+-- Peak-hour load factors are tuned to Indian conditions: the busiest services
+-- pass the 85% mark (High band) at the 08:00 and 18:00 peaks, while off-peak
+-- and late-evening services stay comfortably below 60% (Low band). That spread
+-- is what makes the crowd-aware recommendation visible in a demo.
+--
 -- Everything is deterministic: pseudo-randomness comes from md5 of the row key.
 --
 -- DEMO / SIMULATED DATA: the history below is generated, not measured. Hour
@@ -95,8 +100,8 @@ scored as (
   select
     g.*,
     (case g.line_id
-       when 'LN-M1'  then 0.56 when 'LN-M2'  then 0.50 when 'LN-B12' then 0.46
-       when 'LN-T4'  then 0.42 when 'LN-BR1' then 0.48 else 0.34
+       when 'LN-M1'  then 0.64 when 'LN-M2'  then 0.60 when 'LN-B12' then 0.62
+       when 'LN-T4'  then 0.46 when 'LN-BR1' then 0.56 else 0.36
      end)
     * fn_seed_hour_factor(g.hour_of_day, g.weekend)
     * (case when g.is_interchange then 1.16 else 1.0 end)
@@ -156,8 +161,8 @@ scored as (
   select
     g.*,
     (case g.line_id
-       when 'LN-M1'  then 0.56 when 'LN-M2'  then 0.50 when 'LN-B12' then 0.46
-       when 'LN-T4'  then 0.42 when 'LN-BR1' then 0.48 else 0.34
+       when 'LN-M1'  then 0.64 when 'LN-M2'  then 0.60 when 'LN-B12' then 0.62
+       when 'LN-T4'  then 0.46 when 'LN-BR1' then 0.56 else 0.36
      end)
     * fn_seed_hour_factor(g.hour_of_day, g.weekend)
     * (case when g.is_interchange then 1.16 else 1.0 end)
@@ -212,8 +217,8 @@ scored as (
     g.*,
     greatest(0.06, least(1.32,
       (case g.line_id
-         when 'LN-M1'  then 0.56 when 'LN-M2'  then 0.50 when 'LN-B12' then 0.46
-         when 'LN-T4'  then 0.42 when 'LN-BR1' then 0.48 else 0.34
+         when 'LN-M1'  then 0.64 when 'LN-M2'  then 0.60 when 'LN-B12' then 0.62
+         when 'LN-T4'  then 0.46 when 'LN-BR1' then 0.56 else 0.36
        end)
       * fn_seed_hour_factor(g.hour_of_day, g.weekend)
       * (case when g.is_interchange then 1.16 else 1.0 end)

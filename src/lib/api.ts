@@ -43,6 +43,11 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // The planner query can ask to be held for a moment so the "AI analyzing
+  // routes…" state stays readable during a live demo.
+  const minDelayMs = Number(new URLSearchParams(path.split('?')[1] ?? '').get('analyzeMs') ?? 0);
+  const startedAt = minDelayMs > 0 ? Date.now() : 0;
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -55,6 +60,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       0,
       'NETWORK_ERROR',
     );
+  }
+
+  if (minDelayMs > 0) {
+    const remaining = minDelayMs - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
   }
 
   if (response.status === 204) return undefined as T;
@@ -159,6 +169,8 @@ export const api = {
     maxTransfers?: number;
     crowdTolerance?: number;
     persist?: boolean;
+    /** Minimum time the request should take, so the analysing state is visible. */
+    analyzeMs?: number;
   }) =>
     request<PlannerResponse>(
       `/plan${query({
@@ -170,6 +182,7 @@ export const api = {
         maxTransfers: params.maxTransfers,
         crowdTolerance: params.crowdTolerance,
         persist: params.persist,
+        analyzeMs: params.analyzeMs,
       })}`,
     ),
 

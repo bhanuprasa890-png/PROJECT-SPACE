@@ -45,24 +45,14 @@ const CROWD_TONES: Record<CrowdLevel, CrowdTone> = {
     description: CROWD_LEVEL_META.moderate.description,
   },
   high: {
-    text: 'text-crowd-high',
-    bg: 'bg-crowd-high/14',
-    border: 'border-crowd-high/40',
-    dot: 'bg-crowd-high',
-    stroke: '#fb923c',
-    fill: 'rgba(251, 146, 60, 0.18)',
-    label: CROWD_LEVEL_META.high.label,
-    description: CROWD_LEVEL_META.high.description,
-  },
-  critical: {
     text: 'text-crowd-critical',
     bg: 'bg-crowd-critical/14',
     border: 'border-crowd-critical/45',
     dot: 'bg-crowd-critical',
     stroke: '#f43f5e',
     fill: 'rgba(244, 63, 94, 0.2)',
-    label: CROWD_LEVEL_META.critical.label,
-    description: CROWD_LEVEL_META.critical.description,
+    label: CROWD_LEVEL_META.high.label,
+    description: CROWD_LEVEL_META.high.description,
   },
 };
 

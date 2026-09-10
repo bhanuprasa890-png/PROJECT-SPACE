@@ -1,4 +1,4 @@
-import { crowdLevelFromRatio, crowdPenalty } from '../../shared/crowd';
+import { comfortFromRatio, crowdLevelFromRatio, crowdPenaltyMinutes } from '../../shared/crowd';
 import type {
   ItineraryLeg,
   PlannerRequest,
@@ -36,8 +36,13 @@ import { addMinutes, clamp, formatClock, minutesBetween, round } from '../lib/ti
  *     asking the database for the next departures at every boarding stop.
  *  3. **Predict** the occupancy of every leg at the exact minute the rider
  *     would be on board, using the shared `CrowdModel`.
- *  4. **Score** each itinerary with tunable multi-objective weights stored in
- *     `model_config`, then label the winner and explain the trade-offs.
+ *  4. **Score** each itinerary with one transparent formula, in effective
+ *     minutes, then label the winner and explain the trade-offs:
+ *
+ *         route score = travel time + waiting time + crowd penalty
+ *
+ *     Only the crowd term is weighted, by the rider's crowd sensitivity, so the
+ *     arithmetic shown in the UI always adds up.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -77,8 +82,15 @@ interface ScoredItinerary {
   transfers: number;
   crowdRisk: number;
   avgCrowdRatio: number;
+  /** Model confidence at the busiest stretch (the prediction that matters most). */
+  peakConfidence: number;
   score: number;
-  scoreBreakdown: { time: number; crowd: number; transfer: number; walk: number };
+  scoreBreakdown: {
+    travelMinutes: number;
+    waitingMinutes: number;
+    crowdPenaltyMinutes: number;
+    totalScore: number;
+  };
   fare: number;
   co2SavedKg: number;
   signature: string;
@@ -313,6 +325,7 @@ async function evaluate(
   let waitMinutes = 0;
   let walkMinutes = 0;
   let crowdRisk = 0;
+  let peakConfidence = 1;
   let weightedRatioSum = 0;
   let durationSum = 0;
   let distanceKm = 0;
@@ -438,7 +451,10 @@ async function evaluate(
       peakStopName,
     });
 
-    if (peak > crowdRisk) crowdRisk = peak;
+    if (peak > crowdRisk) {
+      crowdRisk = peak;
+      peakConfidence = boardingPrediction.confidence;
+    }
     weightedRatioSum += boardingPrediction.ratio * Math.max(durationMinutes, 1);
     durationSum += Math.max(durationMinutes, 1);
 
@@ -482,19 +498,23 @@ async function evaluate(
   const arriveAt = last.alightAt;
   const totalMinutes = Math.max(1, minutesBetween(first.boardAt, arriveAt));
   const avgCrowdRatio = durationSum > 0 ? round(weightedRatioSum / durationSum, 3) : crowdRisk;
-  const expectation = round(0.6 * avgCrowdRatio + 0.4 * crowdRisk, 3);
   const transfers = scheduled.length - 1;
 
-  const scoreBreakdown = {
-    time: round(totalMinutes * weights.time, 3),
-    crowd: round(crowdPenalty(expectation) * weights.crowd * context.crowdWeightScale, 3),
-    transfer: round(transfers * weights.transfer, 3),
-    walk: round(walkMinutes * weights.walk, 3),
-  };
-  const score = round(
-    scoreBreakdown.time + scoreBreakdown.crowd + scoreBreakdown.transfer + scoreBreakdown.walk,
-    3,
+  // Route score = travel time + waiting time + crowd penalty, all in minutes.
+  // The crowd penalty is the occupancy curve scaled by the rider's crowd
+  // sensitivity, so a rider who hates crowds will trade time to avoid them.
+  const travelMinutes = Math.max(0, totalMinutes - waitMinutes);
+  const crowdPenalty = round(
+    crowdPenaltyMinutes(crowdRisk) * weights.crowd * context.crowdWeightScale,
+    1,
   );
+  const scoreBreakdown = {
+    travelMinutes,
+    waitingMinutes: waitMinutes,
+    crowdPenaltyMinutes: crowdPenalty,
+    totalScore: round(travelMinutes + waitMinutes + crowdPenalty, 1),
+  };
+  const score = scoreBreakdown.totalScore;
 
   const fare = round(weights.defaultFare + transfers * 0.85, 2);
 
@@ -510,6 +530,7 @@ async function evaluate(
     transfers,
     crowdRisk: round(crowdRisk, 3),
     avgCrowdRatio,
+    peakConfidence,
     score,
     scoreBreakdown,
     fare,
@@ -523,6 +544,15 @@ async function evaluate(
 /* -------------------------------------------------------------------------- */
 /* Narrative generation                                                       */
 /* -------------------------------------------------------------------------- */
+
+/** The route an itinerary belongs to: the line the rider spends longest on. */
+function primaryLineId(itinerary: ScoredItinerary): string {
+  const longest = itinerary.scheduled.reduce(
+    (best, leg) => (leg.legs.durationMinutes > best.legs.durationMinutes ? leg : best),
+    itinerary.scheduled[0],
+  );
+  return longest.segment.lineId;
+}
 
 function buildHeadline(option: ScoredItinerary, kind: RecommendationKind, worstRisk: number): string {
   const boarding = option.scheduled[0];
@@ -701,11 +731,26 @@ export async function planJourney(
   }
 
   const badgeLabels: Record<RecommendationKind, string> = {
-    best: 'Recommended',
-    fastest: 'Fastest',
-    quietest: 'Quietest',
+    best: 'AI Recommended',
+    fastest: 'Fastest Route',
+    quietest: 'Least Crowded Route',
     fewest_transfers: 'Fewest changes',
   };
+
+  // Route identity comes from the canonical `routes` table (migration 0004),
+  // not from the UI or the network model — the card headers show published
+  // route numbers and names straight out of Postgres.
+  const primaryLineIds = ranked.map((itinerary) => primaryLineId(itinerary));
+  const routeIdentity = new Map<string, { number: string; name: string }>();
+  if (primaryLineIds.length) {
+    const rows = await db.query<{ id: string; route_number: string; route_name: string }>(
+      `select id, route_number, route_name from routes where id = any($1::text[])`,
+      [primaryLineIds],
+    );
+    for (const row of rows) {
+      routeIdentity.set(row.id, { number: row.route_number, name: row.route_name });
+    }
+  }
 
   const options: RouteOption[] = ranked.map((itinerary, position) => {
     const kind = lensFor.get(itinerary.signature) ?? 'quietest';
@@ -713,10 +758,18 @@ export async function planJourney(
       (a, b) => new Date(a.departAt).getTime() - new Date(b.departAt).getTime(),
     );
 
+    const primaryLine = index.lineById.get(primaryLineId(itinerary));
+    const identity = routeIdentity.get(primaryLineId(itinerary));
+    const breakdown = itinerary.scoreBreakdown;
+
     return {
       id: `opt-${kind}-${position}`,
       kind,
       badgeLabel: badgeLabels[kind],
+      routeId: identity ? primaryLineId(itinerary) : null,
+      routeNumber: identity?.number ?? primaryLine?.code ?? '—',
+      routeName: identity?.name ?? primaryLine?.name ?? 'Transit route',
+      lineCodes: itinerary.scheduled.map((leg) => leg.legs.lineCode ?? ''),
       headline: buildHeadline(itinerary, kind, worstRisk),
       rationale: buildRationale(itinerary, index),
       departAt: itinerary.departAt.toISOString(),
@@ -728,10 +781,17 @@ export async function planJourney(
       fare: itinerary.fare,
       co2SavedKg: itinerary.co2SavedKg,
       score: itinerary.score,
-      scoreBreakdown: itinerary.scoreBreakdown,
+      scoreBreakdown: breakdown,
       crowdRisk: itinerary.crowdRisk,
       crowdRiskLevel: crowdLevelFromRatio(itinerary.crowdRisk),
       avgCrowdRatio: itinerary.avgCrowdRatio,
+      predictedOccupancyPct: Math.round(itinerary.crowdRisk * 100),
+      confidencePct: Math.round(itinerary.peakConfidence * 100),
+      comfort: comfortFromRatio(itinerary.crowdRisk),
+      scoreExplanation:
+        `Score ${breakdown.totalScore} min = ${breakdown.travelMinutes} min travel + ` +
+        `${breakdown.waitingMinutes} min waiting + ${breakdown.crowdPenaltyMinutes} min crowd penalty ` +
+        `(from ${Math.round(itinerary.crowdRisk * 100)}% peak occupancy)`,
       legs,
       crowdingAvoidedPct:
         worstRisk > 0 ? round(((worstRisk - itinerary.crowdRisk) / worstRisk) * 100, 1) : 0,

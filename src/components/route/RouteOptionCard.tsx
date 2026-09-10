@@ -1,14 +1,33 @@
-import { ChevronRight, Clock, Coins, Leaf, MoveRight, ShieldCheck, Users } from 'lucide-react';
+import { useState } from 'react';
+import {
+  AlertTriangle,
+  Armchair,
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  MapPin,
+  Users,
+} from 'lucide-react';
 import type { RouteOption } from '@shared/types';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { CrowdBadge, CrowdMeter } from '../crowd/CrowdIndicators';
-import { cn, formatClock, formatDuration, formatPercent } from '../../lib/utils';
+import { ScoreBreakdown } from './ScoreBreakdown';
+import { confidenceTone, comfortTone, formatScore } from '../../lib/scoring';
+import { cn, formatClock, formatPercent } from '../../lib/utils';
 
 /**
- * One recommended itinerary. The card leads with the trade-off (time vs.
- * crowding) because that is the decision the rider is actually making.
+ * One route option, built for a 60-second demo:
+ *
+ *   route number + name → the four numbers that decide the trip
+ *   (travel, waiting, predicted occupancy, AI confidence) → comfort indicator
+ *   → "Why this route?" arithmetic → boarding plan.
+ *
+ * Every value is read from the planner/API, which reads Postgres: route identity
+ * from the canonical `routes` table, timings from the timetable, occupancy and
+ * confidence from the crowd model.
  */
 export function RouteOptionCard({
   option,
@@ -16,30 +35,55 @@ export function RouteOptionCard({
   onOpen,
   className,
   style,
+  defaultOpen = false,
 }: {
   option: RouteOption;
   isRecommended: boolean;
   onOpen: () => void;
   className?: string;
   style?: React.CSSProperties;
+  defaultOpen?: boolean;
 }) {
-  const transitLegs = option.legs.filter((leg) => leg.kind === 'transit');
-  const lineCodes = transitLegs.map((leg) => leg.lineCode ?? '');
+  const [showWhy, setShowWhy] = useState(defaultOpen);
+  const comfort = comfortTone(option.comfort);
+  const confidence = confidenceTone(option.confidencePct);
 
   return (
     <Card
-      interactive
-      accent={isRecommended ? 'pulse' : option.crowdRiskLevel === 'critical' ? 'critical' : 'none'}
+      interactive={false}
+      accent={isRecommended ? 'pulse' : 'none'}
       className={cn(
-        'animate-rise p-4 transition',
-        isRecommended && 'ring-1 ring-pulse-400/25',
+        'animate-rise relative p-4 transition-colors',
+        isRecommended
+          ? 'border-pulse-400/45 shadow-[0_24px_70px_-40px_rgba(56,245,192,0.75)] ring-1 ring-pulse-400/30'
+          : 'border-white/10',
         className,
       )}
       style={style}
     >
+      {isRecommended && (
+        <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pulse-300/80 to-transparent" />
+      )}
+
+      {/* ------------------------------------------------ route identity + rank */}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 font-mono text-sm font-semibold',
+                isRecommended
+                  ? 'border-pulse-400/50 bg-pulse-400/15 text-pulse-100'
+                  : 'border-white/12 bg-white/6 text-mist-100',
+              )}
+            >
+              {option.lineCodes.map((code, index) => (
+                <span key={`${code}-${index}`} className="flex items-center gap-1">
+                  {index > 0 && <ChevronRight className="size-3 text-mist-500" />}
+                  {code || '—'}
+                </span>
+              ))}
+            </span>
             <Badge
               tone={
                 option.kind === 'best'
@@ -50,121 +94,162 @@ export function RouteOptionCard({
                       ? 'info'
                       : 'neutral'
               }
+              icon={option.kind === 'best' ? <Bot className="size-3" /> : undefined}
             >
               {option.badgeLabel}
             </Badge>
-            <CrowdBadge level={option.crowdRiskLevel} label={`Peak ${formatPercent(option.crowdRisk)}`} />
-            {option.crowdingAvoidedPct > 5 ? (
-              <Badge tone="low" icon={<ShieldCheck className="size-3" />}>
-                {Math.round(option.crowdingAvoidedPct)}% less crowded
-              </Badge>
-            ) : null}
           </div>
-          <p className="mt-2 text-sm leading-snug text-mist-200">{option.headline}</p>
+
+          <p className="truncate text-sm font-medium text-mist-100" title={option.routeName}>
+            {option.routeName}
+          </p>
+
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.7rem] text-mist-400">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="size-3" />
+              {formatClock(option.departAt)} → {formatClock(option.arriveAt)}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-3" />
+              {option.transfers === 0 ? 'Direct' : `${option.transfers} change${option.transfers > 1 ? 's' : ''}`}
+            </span>
+            {option.crowdingAvoidedPct > 5 && (
+              <span className="text-crowd-low">
+                {Math.round(option.crowdingAvoidedPct)}% less crowded than the busiest option
+              </span>
+            )}
+          </p>
         </div>
 
+        {/* route score */}
         <div className="text-right">
-          <p className="font-display text-2xl leading-none font-semibold text-mist-100">
+          <p className="font-display text-3xl leading-none font-semibold text-mist-50">
             {option.totalMinutes}
             <span className="ml-1 text-xs font-normal text-mist-400">min</span>
           </p>
-          <p className="mt-1 font-mono text-[0.7rem] text-mist-400">
-            {formatClock(option.departAt)} → {formatClock(option.arriveAt)}
+          <p className="mt-1 font-mono text-[0.65rem] text-mist-500">
+            score {formatScore(option.scoreBreakdown.totalScore)}
           </p>
         </div>
       </div>
 
-      {/* leg chain */}
-      <div className="mt-3.5 flex flex-wrap items-center gap-2">
-        {option.legs.map((leg, index) =>
-          leg.kind === 'walk' ? (
-            <span key={`walk-${index}`} className="flex items-center gap-1 text-[0.7rem] text-mist-400">
-              <MoveRight className="size-3.5" />
-              {leg.durationMinutes}m walk
-            </span>
-          ) : (
-            <span
-              key={`${leg.lineId}-${index}`}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1"
-            >
-              <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: leg.lineColor ?? '#38bdf8' }}
-              />
-              <span className="font-mono text-[0.7rem] text-mist-200">{leg.lineCode}</span>
-              {leg.crowd ? (
-                <span className={cn('font-mono text-[0.65rem]', crowdTextTone(leg.crowd.ratio))}>
-                  {formatPercent(leg.crowd.ratio)}
-                </span>
-              ) : null}
-            </span>
-          ),
-        )}
+      {/* --------------------------------------------------------- the 4 numbers */}
+      <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Metric
+          label="Travel time"
+          value={`${option.scoreBreakdown.travelMinutes} min`}
+          hint="Door-to-door time between stops"
+        />
+        <Metric
+          label="Waiting time"
+          value={`${option.waitMinutes} min`}
+          hint="Time waiting to board, including changes"
+        />
+        <Metric
+          label="Predicted occupancy"
+          value={formatPercent(option.crowdRisk)}
+          hint={`Peak load on the busiest stretch · average ${formatPercent(option.avgCrowdRatio)}`}
+          valueClass={cn(option.crowdRiskLevel === 'high' && 'text-crowd-critical')}
+          badge={<CrowdBadge level={option.crowdRiskLevel} size="xs" />}
+        />
+        <Metric
+          label="AI confidence"
+          value={`${option.confidencePct}%`}
+          hint={`Model certainty in the busiest prediction (${confidence.label})`}
+          valueClass={confidence.text}
+        />
       </div>
 
-      <div className="mt-3.5">
-        <div className="mb-1.5 flex items-center justify-between text-[0.68rem] text-mist-400">
-          <span>Worst predicted load on this itinerary</span>
-          <span className="font-mono">
-            {formatPercent(option.crowdRisk)} peak · {formatPercent(option.avgCrowdRatio)} average
+      {/* ------------------------------------------------- occupancy + comfort */}
+      <div className="mt-3.5 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[0.7rem] font-medium',
+              comfort.border,
+              comfort.bg,
+              comfort.text,
+            )}
+            title={comfort.description}
+          >
+            <ComfortIcon comfort={option.comfort} />
+            {comfort.label}
+          </span>
+          <span className="font-mono text-[0.68rem] text-mist-500">
+            peak {formatPercent(option.crowdRisk)} · avg {formatPercent(option.avgCrowdRatio)}
           </span>
         </div>
         <CrowdMeter ratio={option.crowdRisk} level={option.crowdRiskLevel} />
       </div>
 
-      <dl className="mt-3.5 grid grid-cols-2 gap-2 text-[0.7rem] sm:grid-cols-4">
-        <Fact icon={<Clock className="size-3.5" />} label="Travel" value={formatDuration(option.totalMinutes)} />
-        <Fact
-          icon={<Users className="size-3.5" />}
-          label="Changes"
-          value={option.transfers === 0 ? 'Direct' : `${option.transfers}`}
-        />
-        <Fact icon={<Coins className="size-3.5" />} label="Fare" value={`${option.fare.toFixed(2)}`} />
-        <Fact
-          icon={<Leaf className="size-3.5" />}
-          label="CO₂ saved"
-          value={`${option.co2SavedKg.toFixed(2)} kg`}
-        />
-      </dl>
+      {/* ------------------------------------------------------- why this route */}
+      <div className="mt-3.5 rounded-xl border border-white/8 bg-white/[0.02]">
+        <button
+          type="button"
+          onClick={() => setShowWhy((current) => !current)}
+          aria-expanded={showWhy}
+          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+        >
+          <span className="flex items-center gap-2 text-xs font-medium text-mist-200">
+            <Bot className="size-3.5 text-pulse-300" />
+            Why this route?
+          </span>
+          <span className="flex items-center gap-2 font-mono text-[0.68rem] text-mist-500">
+            {option.scoreBreakdown.travelMinutes} + {option.scoreBreakdown.waitingMinutes} +{' '}
+            {option.scoreBreakdown.crowdPenaltyMinutes} = {option.scoreBreakdown.totalScore}
+            <ChevronDown className={cn('size-3.5 transition-transform', showWhy && 'rotate-180')} />
+          </span>
+        </button>
+        {showWhy && (
+          <div className="border-t border-white/8 px-3 py-3">
+            <p className="mb-3 text-[0.72rem] leading-relaxed text-mist-300">{option.scoreExplanation}</p>
+            <ScoreBreakdown option={option} />
+          </div>
+        )}
+      </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          {option.rationale.slice(0, 1).map((reason) => (
-            <span key={reason} className="text-[0.68rem] leading-relaxed text-mist-500">
-              {reason}
-            </span>
-          ))}
-        </div>
+      <div className="mt-3.5 flex items-center justify-between gap-3">
+        <p className="text-[0.68rem] leading-relaxed text-mist-500">{option.headline}</p>
         <Button
           size="sm"
           variant={isRecommended ? 'primary' : 'outline'}
           iconRight={<ChevronRight className="size-3.5" />}
           onClick={onOpen}
+          className="shrink-0"
         >
-          Boarding plan
+          Route details
         </Button>
       </div>
-
-      <p className="sr-only">{lineCodes.join(', ')}</p>
     </Card>
   );
 }
 
-function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  hint,
+  valueClass,
+  badge,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  valueClass?: string;
+  badge?: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-white/8 bg-white/[0.02] px-2.5 py-2">
-      <dt className="flex items-center gap-1.5 text-[0.62rem] tracking-wider text-mist-500 uppercase">
-        {icon}
+    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-2.5 py-2" title={hint}>
+      <p className="flex items-center justify-between gap-1 text-[0.6rem] tracking-wider text-mist-500 uppercase">
         {label}
-      </dt>
-      <dd className="mt-0.5 font-mono text-xs text-mist-200">{value}</dd>
+        {badge}
+      </p>
+      <p className={cn('mt-1 font-mono text-sm text-mist-100', valueClass)}>{value}</p>
     </div>
   );
 }
 
-function crowdTextTone(ratio: number): string {
-  if (ratio >= 1) return 'text-crowd-critical';
-  if (ratio >= 0.8) return 'text-crowd-high';
-  if (ratio >= 0.55) return 'text-crowd-moderate';
-  return 'text-crowd-low';
+function ComfortIcon({ comfort }: { comfort: RouteOption['comfort'] }) {
+  if (comfort === 'comfortable') return <Armchair className="size-3.5" />;
+  if (comfort === 'standing') return <Users className="size-3.5" />;
+  return <AlertTriangle className="size-3.5" />;
 }

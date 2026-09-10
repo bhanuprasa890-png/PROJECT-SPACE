@@ -68,7 +68,7 @@ export function ForecastChart({
   const active = hover !== null ? series[hover] : null;
   const isForecast = hover !== null && hover >= forecastStart;
 
-  const gridRatios = [0, CROWD_THRESHOLDS.moderate, CROWD_THRESHOLDS.high, CROWD_THRESHOLDS.critical, 1.3];
+  const gridRatios = [0, CROWD_THRESHOLDS.moderate, CROWD_THRESHOLDS.high, 1.3];
 
   return (
     <div className={cn('relative w-full', className)}>

@@ -158,8 +158,12 @@ begin
   ) as veh on true;
 
   -- ---------------------------------------------------------------------------
-  -- route_options ← a scored alternative set per route, using the planner
-  -- objective (time weight + waiting + crowd penalty × crowding weight)
+  -- route_options ← a scored alternative set per route, using the shared score
+  --
+  --     total_score = travel time + waiting time + crowd penalty
+  --
+  -- where the crowd penalty is the occupancy curve in minute-equivalents
+  -- (fn_crowd_penalty_minutes), scaled by the rider's crowd weight.
   -- ---------------------------------------------------------------------------
   insert into route_options (id, route_id, travel_time_minutes, waiting_time_minutes,
                              crowd_penalty, total_score, created_at)
@@ -168,13 +172,9 @@ begin
     r.id,
     greatest(1, k.travel_minutes),
     k.waiting_minutes,
-    k.crowd_penalty,
-    round(
-      greatest(1, k.travel_minutes) * v_time_weight
-      + k.waiting_minutes * 0.8
-      + k.crowd_penalty * v_crowd_weight * 6,
-      3
-    ),
+    p.crowd_penalty_minutes,
+    -- Additive by construction: the stored score is exactly the sum the UI shows.
+    round(greatest(1, k.travel_minutes) + k.waiting_minutes + p.crowd_penalty_minutes, 3),
     now()
   from routes r
   join lines l on l.id = r.id
@@ -193,7 +193,10 @@ begin
         round(crowd.live_ratio * 1.05, 3)),
       ('quietest', r.estimated_duration_minutes + 5, l.headway_minutes,
         round(crowd.live_ratio * 0.72, 3))
-  ) as k(slot, travel_minutes, waiting_minutes, crowd_penalty);
+  ) as k(slot, travel_minutes, waiting_minutes, crowd_ratio)
+  cross join lateral (
+    select round(fn_crowd_penalty_minutes(k.crowd_ratio) * v_crowd_weight, 3) as crowd_penalty_minutes
+  ) as p;
 
   -- ---------------------------------------------------------------------------
   -- service_alerts ← alerts (route-level notices)

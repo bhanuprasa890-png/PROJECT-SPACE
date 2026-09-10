@@ -1,4 +1,4 @@
-import { CROWD_THRESHOLDS } from '@shared/crowd';
+import { CROWD_LEVELS, CROWD_LEVEL_META, CROWD_THRESHOLDS } from '@shared/crowd';
 import type { CrowdLevel } from '@shared/types';
 import { cn, crowdTone, formatPercent } from '../../lib/utils';
 
@@ -76,7 +76,7 @@ export function CrowdMeter({
           }}
         />
         {showTicks
-          ? [CROWD_THRESHOLDS.moderate, CROWD_THRESHOLDS.high, CROWD_THRESHOLDS.critical].map(
+          ? [CROWD_THRESHOLDS.moderate, CROWD_THRESHOLDS.high].map(
               (threshold) => (
                 <span
                   key={threshold}
@@ -126,12 +126,11 @@ export function ConfidencePill({ value, className }: { value: number; className?
 
 /** Legend for the crowd scale — used on dashboards and legends. */
 export function CrowdLegend({ className }: { className?: string }) {
-  const levels: { level: CrowdLevel; range: string }[] = [
-    { level: 'low', range: '< 55%' },
-    { level: 'moderate', range: '55–80%' },
-    { level: 'high', range: '80–100%' },
-    { level: 'critical', range: '> 100%' },
-  ];
+  // Same three bands the planner and the alerts use.
+  const levels: { level: CrowdLevel; range: string }[] = CROWD_LEVELS.map((level) => ({
+    level,
+    range: CROWD_LEVEL_META[level].range,
+  }));
 
   return (
     <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-2', className)}>

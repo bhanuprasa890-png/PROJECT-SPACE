@@ -16,8 +16,10 @@ import { RouteOptionCard } from '../components/route/RouteOptionCard';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Segmented } from '../components/ui/Controls';
-import { EmptyState, ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { AiAnalyzing } from '../components/route/AiAnalyzing';
 import { CrowdLegend } from '../components/crowd/CrowdIndicators';
+import { useMinimumLoading } from '../hooks/useUi';
+import { EmptyState, ErrorState } from '../components/ui/Skeleton';
 import { LivePill } from '../components/crowd/CrowdHotspotList';
 import { cn, formatClock, formatDuration, formatPercent } from '../lib/utils';
 
@@ -65,6 +67,8 @@ export function RouteResults() {
     avoidCrowding,
     maxTransfers,
     enabled: Boolean(origin && destination),
+    // Hold the request for a beat so "AI analyzing routes…" is readable in a demo.
+    analyzeMs: 1400,
   });
 
   const options = useMemo(() => {
@@ -108,6 +112,9 @@ export function RouteResults() {
   };
 
   const hasQuery = Boolean(origin && destination);
+  // Keep the "AI analyzing routes…" run visible for a beat so the pipeline is
+  // readable during a demo even when the API answers in milliseconds.
+  const analyzing = useMinimumLoading(hasQuery && plan.isLoading, 1800);
 
   return (
     <div className="space-y-5">
@@ -131,11 +138,8 @@ export function RouteResults() {
           message={(plan.error as Error).message}
           onRetry={() => void plan.refetch()}
         />
-      ) : plan.isLoading ? (
-        <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-          <PanelSkeleton rows={4} />
-          <PanelSkeleton rows={3} />
-        </div>
+      ) : analyzing ? (
+        <AiAnalyzing from={plan.data?.origin.name} to={plan.data?.destination.name} />
       ) : plan.data && plan.data.options.length === 0 ? (
         <EmptyState
           title="No service found"
@@ -160,7 +164,7 @@ export function RouteResults() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-lg font-semibold text-mist-100">
-                  {plan.data.options.length} crowd-aware option
+                  {plan.data.options.length} crowd-aware route
                   {plan.data.options.length === 1 ? '' : 's'}
                 </h2>
                 <p className="mt-0.5 text-xs text-mist-400">
@@ -168,15 +172,16 @@ export function RouteResults() {
                   {formatClock(plan.data.departAfter)}
                   {avoidCrowding ? ' · crowding weighted' : ' · time only'}
                 </p>
+                <CrowdLegend className="mt-2.5" />
               </div>
               <Segmented<SortMode>
                 size="sm"
                 value={sort}
                 onChange={setSort}
                 options={[
-                  { value: 'recommended', label: 'Recommended' },
+                  { value: 'recommended', label: 'AI Recommended' },
                   { value: 'fastest', label: 'Fastest' },
-                  { value: 'quietest', label: 'Quietest' },
+                  { value: 'quietest', label: 'Least crowded' },
                   { value: 'fewest_transfers', label: 'Fewest changes' },
                 ]}
               />
@@ -187,6 +192,7 @@ export function RouteResults() {
                 key={option.id}
                 option={option}
                 isRecommended={option.id === plan.data?.recommendedOptionId}
+                defaultOpen={option.kind === 'best'}
                 onOpen={() => openDetails(option)}
                 style={{ animationDelay: `${index * 70}ms` }}
               />
@@ -198,7 +204,7 @@ export function RouteResults() {
             <Card accent="pulse">
               <CardHeader
                 title="Why this recommendation"
-                subtitle={`Model ${plan.data.modelVersion} · scored on time, crowding, changes and walking`}
+                subtitle={`Model ${plan.data.modelVersion} · score = travel + waiting + crowd penalty`}
                 icon={<Sparkles className="size-4" />}
                 actions={<LivePill label="Scored" />}
               />

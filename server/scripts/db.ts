@@ -134,11 +134,49 @@ async function verify(db: Queryable): Promise<boolean> {
 
   const badLevels = await db.one<{ count: string }>(
     `select count(*)::text as count from occupancy_predictions
-     where crowd_level not in ('low', 'moderate', 'high', 'critical')
+     where crowd_level not in ('low', 'moderate', 'high')
+        or crowd_level <> fn_crowd_level(predicted_occupancy_percentage / 100.0)
         or predicted_occupancy_percentage < 0
         or confidence_percentage not between 0 and 100`,
   );
-  check('occupancy predictions within valid ranges', Number(badLevels?.count ?? 0) === 0);
+  check('occupancy predictions within valid ranges and three bands', Number(badLevels?.count ?? 0) === 0);
+
+  // The commuter score must be exactly additive — this is what the route cards
+  // show as "Why this route?":
+  //     total_score = travel time + waiting time + crowd penalty
+  const scoreDrift = await db.one<{ count: string; worst: string | null }>(
+    `select count(*)::text as count,
+            max(abs(total_score - (travel_time_minutes + waiting_time_minutes + crowd_penalty)))::text as worst
+     from route_options
+     where abs(total_score - (travel_time_minutes + waiting_time_minutes + crowd_penalty)) > 0.001`,
+  );
+  check(
+    'route score is travel + waiting + crowd penalty',
+    Number(scoreDrift?.count ?? 0) === 0,
+    `${scoreDrift?.count ?? 0} drift (max ${scoreDrift?.worst ?? '0'})`,
+  );
+
+  const bands = await db.query<{ ratio: string; level: string }>(
+    `select r::text as ratio, fn_crowd_level(r) as level
+     from (values (0.10::numeric), (0.60), (0.61), (0.85), (0.86), (1.20)) as v(r)`,
+  );
+  check(
+    'shared bands: <60 low · 60-85 moderate · >85 high',
+    bands.map((row) => row.level).join(',') === 'low,low,moderate,moderate,high,high',
+    bands.map((row) => `${row.ratio}=${row.level}`).join(' '),
+  );
+
+  const penalty = await db.one<{ low: string; mid: string; high: string }>(
+    `select fn_crowd_penalty_minutes(0.30)::text as low,
+            fn_crowd_penalty_minutes(0.70)::text as mid,
+            fn_crowd_penalty_minutes(1.00)::text as high`,
+  );
+  check(
+    'crowd penalty rises with occupancy',
+    Number(penalty?.low ?? 0) < Number(penalty?.mid ?? 0) &&
+      Number(penalty?.mid ?? 0) < Number(penalty?.high ?? 0),
+    `30%→${penalty?.low} · 70%→${penalty?.mid} · 100%→${penalty?.high} min`,
+  );
 
   const roles = await db.query<{ role: string }>(
     `select distinct role from app_users order by role`,
