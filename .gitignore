@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+build
+coverage
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log
+npm-debug.log*
+
+# Local runtime state (embedded Postgres data directory used for offline demo mode)
+.data
+.env
+.env.*
+!.env.example
+
+# Vite / TS caches
+.vite
+*.tsbuildinfo

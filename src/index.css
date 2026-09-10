@@ -1,0 +1,238 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   TransitPulse AI — design tokens
+   Dark transportation-tech palette: deep ink surfaces, teal/cyan accents and
+   the green → yellow → orange → red crowd scale used across the product.
+   ========================================================================== */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-ink-950: #04060c;
+  --color-ink-900: #070a13;
+  --color-ink-850: #0a0e1a;
+  --color-ink-800: #0e1424;
+  --color-ink-700: #151d33;
+  --color-ink-600: #1e2842;
+  --color-ink-500: #2b3855;
+
+  --color-mist-100: #eef4ff;
+  --color-mist-200: #cdd8ef;
+  --color-mist-300: #9fb0d0;
+  --color-mist-400: #7486a8;
+  --color-mist-500: #55658a;
+  --color-mist-600: #3c4a68;
+  --color-mist-700: #2a354d;
+
+  --color-pulse-300: #7dffdd;
+  --color-pulse-400: #38f5c0;
+  --color-pulse-500: #14d9a8;
+  --color-pulse-600: #08a883;
+
+  --color-sky-glow: #4cc9f0;
+  --color-violet-glow: #8b7bff;
+
+  --color-crowd-low: #34d399;
+  --color-crowd-moderate: #fbbf24;
+  --color-crowd-high: #fb923c;
+  --color-crowd-critical: #f43f5e;
+
+  --color-sev-info: #60a5fa;
+  --color-sev-minor: #fbbf24;
+  --color-sev-major: #fb923c;
+  --color-sev-critical: #f43f5e;
+
+  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.4s ease-out both;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+  --animate-drift: drift 18s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.8s linear infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -3%, 0) scale(1.06);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-mist-100);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-pulse-400) 35%, transparent);
+    color: var(--color-mist-100);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  /* Slim scrollbars that suit the dark shell */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-600) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-ink-600);
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-pulse-400);
+    outline-offset: 2px;
+  }
+}
+
+/* ==========================================================================
+   Component utilities
+   ========================================================================== */
+@utility glass {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in oklab, white 7%, transparent),
+    color-mix(in oklab, white 2%, transparent)
+  );
+  background-color: color-mix(in oklab, var(--color-ink-900) 78%, transparent);
+  border: 1px solid color-mix(in oklab, white 9%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+@utility glass-strong {
+  background-image: linear-gradient(
+    155deg,
+    color-mix(in oklab, white 10%, transparent),
+    color-mix(in oklab, white 3%, transparent)
+  );
+  background-color: color-mix(in oklab, var(--color-ink-850) 88%, transparent);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  backdrop-filter: blur(26px) saturate(150%);
+}
+
+@utility panel-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, white 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, white 4%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@utility text-glow {
+  text-shadow: 0 0 24px color-mix(in oklab, var(--color-pulse-400) 45%, transparent);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .tp-shell-bg {
+    background:
+      radial-gradient(1100px 620px at 12% -8%, color-mix(in oklab, #14d9a8 16%, transparent), transparent 62%),
+      radial-gradient(900px 520px at 96% 4%, color-mix(in oklab, #4cc9f0 14%, transparent), transparent 60%),
+      radial-gradient(700px 620px at 68% 108%, color-mix(in oklab, #8b7bff 12%, transparent), transparent 58%),
+      var(--color-ink-950);
+  }
+
+  .tp-grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
