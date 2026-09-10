@@ -30,6 +30,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Field, Segmented, Select } from '../components/ui/Controls';
 import { ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { SectionHeading } from '../components/ui/Section';
 import { ConfidencePill, CrowdBadge, CrowdMeter } from '../components/crowd/CrowdIndicators';
 import { cn, formatClock, formatPercent } from '../lib/utils';
 
@@ -231,10 +232,13 @@ export function PredictionEnginePage() {
                   Simulation Mode
                 </Badge>
                 <h2 className="font-display text-base font-semibold text-mist-100">
-                  Prediction engine · Input Data → Prediction Engine → Occupancy Prediction → Crowd
-                  Classification → Route Optimization
+                  Prediction engine
                 </h2>
               </div>
+              <p className="mt-1.5 figure text-2xs leading-relaxed text-pulse-200/90">
+                Input Data → Prediction Engine → Occupancy Prediction → Crowd Classification → Route
+                Optimization
+              </p>
               <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-mist-400">
                 {disclaimer ??
                   'Predictions are calculated from simulated historical and live transit data.'}
@@ -253,13 +257,19 @@ export function PredictionEnginePage() {
       </Card>
 
       {/* Stage chain */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="size-4 text-pulse-300" />
-          <h3 className="text-sm font-semibold tracking-wide text-mist-200 uppercase">
-            How a prediction is produced
-          </h3>
-        </div>
+      <section aria-labelledby="engine-pipeline" className="space-y-3">
+        <SectionHeading
+          id="engine-pipeline"
+          eyebrow="Pipeline"
+          title="How a prediction is produced"
+          description="Five stages, each one a seam where a different implementation can be dropped in."
+          icon={BrainCircuit}
+          actions={
+            <Badge tone="neutral" size="xs">
+              {report ? `${report.stages.length} stages` : 'loading'}
+            </Badge>
+          }
+        />
         {report ? <Pipeline stages={report.stages} /> : <PanelSkeleton rows={3} />}
       </section>
 
