@@ -89,8 +89,8 @@ export function AiAlertFeed({
                   <Icon className="size-3.5" />
                 </span>
                 <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-1.5 text-[0.7rem] text-mist-400">
-                    <span className="inline-flex items-center gap-1.5 font-mono text-mist-200">
+                  <p className="flex flex-wrap items-center gap-1.5 text-2xs text-mist-400">
+                    <span className="inline-flex items-center gap-1.5 figure text-mist-200">
                       <span
                         className="size-1.5 rounded-full"
                         style={{ backgroundColor: alert.color, boxShadow: `0 0 6px ${alert.color}` }}
@@ -115,27 +115,27 @@ export function AiAlertFeed({
 
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 sm:grid-cols-4">
               <div>
-                <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">Predicted</p>
-                <p className={cn('font-mono text-sm', crowdToneClass)}>
+                <p className="eyebrow text-mist-500">Predicted</p>
+                <p className={cn('figure text-sm', crowdToneClass)}>
                   {alert.predictedOccupancyPct.toFixed(0)}%
                 </p>
               </div>
               <div>
-                <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">ETA</p>
-                <p className="font-mono text-sm text-mist-200">{formatClock(alert.estimatedAt)}</p>
+                <p className="eyebrow text-mist-500">ETA</p>
+                <p className="figure text-sm text-mist-200">{formatClock(alert.estimatedAt)}</p>
               </div>
               <div>
-                <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">Confidence</p>
-                <p className="font-mono text-sm text-mist-200">{alert.confidencePct.toFixed(0)}%</p>
+                <p className="eyebrow text-mist-500">Confidence</p>
+                <p className="figure text-sm text-mist-200">{alert.confidencePct.toFixed(0)}%</p>
               </div>
               <div>
-                <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">Threshold</p>
-                <p className="font-mono text-sm text-mist-400">{alert.thresholdPct.toFixed(0)}%</p>
+                <p className="eyebrow text-mist-500">Threshold</p>
+                <p className="figure text-sm text-mist-400">{alert.thresholdPct.toFixed(0)}%</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <p className="flex min-w-0 items-start gap-1.5 text-[0.7rem] leading-relaxed text-mist-300">
+              <p className="flex min-w-0 items-start gap-1.5 text-2xs leading-relaxed text-mist-300">
                 <BellRing className="mt-0.5 size-3 shrink-0 text-pulse-300" />
                 <span>
                   <span className="text-mist-500">Recommended action: </span>

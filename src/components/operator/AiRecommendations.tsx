@@ -66,10 +66,10 @@ export function AiRecommendations({
                   <Icon className="size-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-[0.62rem] tracking-wider text-mist-500 uppercase">
+                  <p className="flex items-center gap-1.5 eyebrow text-mist-500">
                     {meta.label}
                     <span className="text-mist-600">·</span>
-                    <span className="font-mono text-mist-400">{recommendation.routeNumber}</span>
+                    <span className="figure text-mist-400">{recommendation.routeNumber}</span>
                   </p>
                   <p className="mt-1 text-sm leading-snug font-semibold text-mist-100">
                     {recommendation.title}
@@ -81,27 +81,27 @@ export function AiRecommendations({
               </Badge>
             </div>
 
-            <p className="text-[0.72rem] leading-relaxed text-mist-400">{recommendation.detail}</p>
+            <p className="text-xs leading-relaxed text-mist-400">{recommendation.detail}</p>
 
             <div className="flex flex-wrap gap-1.5">
               {recommendation.evidence.map((item) => (
                 <span
                   key={item.label}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-ink-950/50 px-2 py-0.5 text-[0.62rem] text-mist-400"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-ink-950/50 px-2 py-0.5 text-3xs text-mist-400"
                 >
                   {item.label}
-                  <span className="font-mono text-mist-200">{item.value}</span>
+                  <span className="figure text-mist-200">{item.value}</span>
                 </span>
               ))}
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 pt-3">
-              <p className="inline-flex items-center gap-1.5 text-[0.7rem] text-pulse-200">
+              <p className="inline-flex items-center gap-1.5 text-2xs text-pulse-200">
                 <CalendarClock className="size-3" />
                 {recommendation.impactLabel}
               </p>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[0.65rem] text-mist-500">
+                <span className="figure text-3xs text-mist-500">
                   confidence {recommendation.confidencePct.toFixed(0)}%
                 </span>
                 <Button

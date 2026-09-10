@@ -80,12 +80,12 @@ function Pipeline({ stages }: { stages: PredictionPipelineStage[] }) {
       {stages.map((stage, index) => (
         <div key={stage.key} className="relative flex items-stretch gap-3">
           <Card className="flex-1 p-4" accent={index === stages.length - 1 ? 'pulse' : 'none'}>
-            <p className="font-mono text-[0.62rem] tracking-[0.16em] text-pulse-300 uppercase">
+            <p className="figure text-3xs tracking-[0.16em] text-pulse-300 uppercase">
               {stage.title}
             </p>
             <p className="mt-2 text-sm font-medium text-mist-100">{stage.summary}</p>
-            <p className="mt-1.5 text-[0.7rem] leading-relaxed text-mist-400">{stage.detail}</p>
-            <p className="mt-2.5 truncate font-mono text-[0.6rem] text-mist-600" title={stage.code}>
+            <p className="mt-1.5 text-2xs leading-relaxed text-mist-400">{stage.detail}</p>
+            <p className="mt-2.5 truncate figure text-3xs text-mist-600" title={stage.code}>
               {stage.code}
             </p>
           </Card>
@@ -122,7 +122,7 @@ function FactorList({ prediction }: { prediction: OccupancyPredictionResult }) {
                 <Icon className={cn('size-3.5 shrink-0', tone.text)} />
                 <span className="truncate">{factor.label}</span>
               </span>
-              <span className={cn('shrink-0 font-mono text-[0.7rem]', tone.text)}>
+              <span className={cn('shrink-0 figure text-2xs', tone.text)}>
                 {factor.contributionPct > 0 ? '+' : ''}
                 {factor.contributionPct.toFixed(1)} pp
               </span>
@@ -130,7 +130,7 @@ function FactorList({ prediction }: { prediction: OccupancyPredictionResult }) {
             <div className="h-1.5 overflow-hidden rounded-full bg-white/6">
               <div className={cn('h-full rounded-full transition-[width] duration-700', tone.bar)} style={{ width: `${width}%` }} />
             </div>
-            <p className="text-[0.68rem] leading-relaxed text-mist-500">{factor.detail}</p>
+            <p className="text-2xs leading-relaxed text-mist-500">{factor.detail}</p>
           </li>
         );
       })}
@@ -152,10 +152,10 @@ function WeatherStrip({ slots }: { slots: WeatherSnapshot[] }) {
         >
           <div className="flex items-center justify-between text-mist-300">
             {conditionIcon(slot.condition)}
-            <span className="font-mono text-[0.65rem] text-mist-500">{formatClock(slot.at)}</span>
+            <span className="figure text-3xs text-mist-500">{formatClock(slot.at)}</span>
           </div>
-          <p className="mt-1.5 text-[0.72rem] font-medium text-mist-100">{slot.label}</p>
-          <p className="mt-0.5 text-[0.65rem] text-mist-500">
+          <p className="mt-1.5 text-xs font-medium text-mist-100">{slot.label}</p>
+          <p className="mt-0.5 text-3xs text-mist-500">
             demand ×{slot.factor.toFixed(2)}
           </p>
         </div>
@@ -340,7 +340,7 @@ export function PredictionEnginePage() {
               <div className="space-y-4 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
-                    <p className="text-[0.68rem] font-medium tracking-wider text-mist-400 uppercase">
+                    <p className="eyebrow text-mist-400">
                       Predicted occupancy
                     </p>
                     <div className="mt-1 flex items-end gap-3">
@@ -356,7 +356,7 @@ export function PredictionEnginePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[0.68rem] font-medium tracking-wider text-mist-400 uppercase">
+                    <p className="eyebrow text-mist-400">
                       Confidence
                     </p>
                     <div className="mt-1 flex items-center justify-end">
@@ -370,34 +370,34 @@ export function PredictionEnginePage() {
                 <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                   <div>
                     <p className="text-mist-500">Interval</p>
-                    <p className="font-mono text-mist-200">
+                    <p className="figure text-mist-200">
                       {result.interval.lowerPercentage.toFixed(0)}–
                       {result.interval.upperPercentage.toFixed(0)}%
                     </p>
                   </div>
                   <div>
                     <p className="text-mist-500">Baseline</p>
-                    <p className="font-mono text-mist-200">
+                    <p className="figure text-mist-200">
                       {result.baselineOccupancyPercentage.toFixed(1)}%
                     </p>
                   </div>
                   <div>
                     <p className="text-mist-500">On board</p>
-                    <p className="font-mono text-mist-200">
+                    <p className="figure text-mist-200">
                       {result.headcount}/{result.capacity}
                     </p>
                   </div>
                   <div>
                     <p className="text-mist-500">Day · hour</p>
-                    <p className="font-mono text-mist-200">
+                    <p className="figure text-mist-200">
                       {result.dayType} · {String(result.hourOfDay).padStart(2, '0')}:00
                     </p>
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-white/8 bg-ink-950/40 px-3 py-2.5">
-                  <p className="text-[0.68rem] text-mist-400">{result.crowd.description}</p>
-                  <p className="mt-1 text-[0.65rem] text-mist-500">
+                  <p className="text-2xs text-mist-400">{result.crowd.description}</p>
+                  <p className="mt-1 text-3xs text-mist-500">
                     Band {result.crowd.range} · {result.crowd.label} · classification threshold{' '}
                     {result.crowd.level === 'low'
                       ? 'below 60%'
@@ -408,13 +408,13 @@ export function PredictionEnginePage() {
                 </div>
 
                 <div>
-                  <p className="mb-2 text-[0.68rem] font-medium tracking-wider text-mist-400 uppercase">
+                  <p className="mb-2 eyebrow text-mist-400">
                     Factor contributions (percentage points)
                   </p>
                   <FactorList prediction={result} />
                 </div>
 
-                <div className="grid gap-2 border-t border-white/6 pt-3 text-[0.68rem] text-mist-500 sm:grid-cols-2">
+                <div className="grid gap-2 border-t border-white/6 pt-3 text-2xs text-mist-500 sm:grid-cols-2">
                   <p>
                     History: {result.inputsUsed.historicalSamples} samples ·{' '}
                     {result.inputsUsed.historicalScope} scope
@@ -456,19 +456,19 @@ export function PredictionEnginePage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-mist-500">Predictor</p>
-                      <p className="font-mono text-mist-200">{report.engine.id}</p>
+                      <p className="figure text-mist-200">{report.engine.id}</p>
                     </div>
                     <div>
                       <p className="text-mist-500">Kind</p>
-                      <p className="font-mono text-mist-200">{report.engine.kind}</p>
+                      <p className="figure text-mist-200">{report.engine.kind}</p>
                     </div>
                     <div>
                       <p className="text-mist-500">Weather source</p>
-                      <p className="font-mono text-mist-200">{report.engine.weatherSource}</p>
+                      <p className="figure text-mist-200">{report.engine.weatherSource}</p>
                     </div>
                     <div>
                       <p className="text-mist-500">Data</p>
-                      <p className="font-mono text-mist-200">
+                      <p className="figure text-mist-200">
                         {report.engine.simulated ? 'simulated' : 'live'}
                       </p>
                     </div>
@@ -480,21 +480,21 @@ export function PredictionEnginePage() {
                     </p>
                   ) : null}
                   <div className="rounded-xl border border-white/8 bg-ink-950/40 px-3 py-2.5">
-                    <p className="text-[0.68rem] tracking-wide text-mist-400 uppercase">
+                    <p className="text-2xs tracking-wide text-mist-400 uppercase">
                       Pluggable interface
                     </p>
-                    <p className="mt-1 font-mono text-[0.66rem] leading-relaxed text-mist-300">
+                    <p className="mt-1 figure text-[0.66rem] leading-relaxed text-mist-300">
                       type OccupancyPredictor = &#123; predict(input: PredictionInput):
                       Promise&lt;PredictionCore&gt; &#125;
                     </p>
-                    <p className="mt-1.5 text-[0.68rem] text-mist-500">
-                      Set <span className="font-mono text-mist-300">PREDICTION_MODEL_URL</span> to
+                    <p className="mt-1.5 text-2xs text-mist-500">
+                      Set <span className="figure text-mist-300">PREDICTION_MODEL_URL</span> to
                       route stage 2 to an external model; the built-in heuristic ensemble stays as the
                       fallback.
                     </p>
                   </div>
                   <p className="text-mist-400">{report.routeOptimization.detail}</p>
-                  <p className="font-mono text-[0.66rem] text-mist-500">
+                  <p className="figure text-[0.66rem] text-mist-500">
                     {report.routeOptimization.scoreFormula}
                   </p>
                 </>
@@ -520,15 +520,15 @@ export function PredictionEnginePage() {
                   >
                     <div className="min-w-0">
                       <CrowdBadge level={entry.level} />
-                      <p className="mt-1 text-[0.68rem] text-mist-400">
+                      <p className="mt-1 text-2xs text-mist-400">
                         {entry.rule} occupancy · {entry.description}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="font-mono text-sm text-mist-100">
+                      <p className="figure text-sm text-mist-100">
                         {formatPercent(entry.examplePercentage / 100, 0)}
                       </p>
-                      <p className="text-[0.62rem] text-mist-500">example → {entry.label}</p>
+                      <p className="text-3xs text-mist-500">example → {entry.label}</p>
                     </div>
                   </div>
                 ))
@@ -551,11 +551,11 @@ export function PredictionEnginePage() {
                   <div key={input.key} className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-xs font-medium text-mist-100">{input.label}</p>
-                      <p className="truncate font-mono text-[0.62rem] text-mist-500" title={input.source}>
+                      <p className="truncate figure text-3xs text-mist-500" title={input.source}>
                         {input.source}
                       </p>
                     </div>
-                    <p className="mt-1 text-[0.68rem] leading-relaxed text-mist-400">{input.detail}</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-mist-400">{input.detail}</p>
                   </div>
                 ))
               )}
@@ -588,7 +588,7 @@ export function PredictionEnginePage() {
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-[0.68rem] leading-relaxed text-mist-500">
+                  <p className="text-2xs leading-relaxed text-mist-500">
                     Demand multipliers are transparent modelling assumptions of this prototype, not
                     measured effects.
                   </p>

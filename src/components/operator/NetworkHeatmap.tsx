@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Layers, MapPin, Radio } from 'lucide-react';
 import type { CrowdHeatmap, CrowdLevel, HeatmapSegment, HeatmapStop } from '@shared/types';
 import { Segmented } from '../ui/Controls';
@@ -71,6 +71,8 @@ export function NetworkHeatmap({
   className?: string;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
+  const gridId = useId();
+  const glowId = useId();
 
   const project = useMemo(() => projector(heatmap.bounds), [heatmap.bounds]);
 
@@ -87,6 +89,11 @@ export function NetworkHeatmap({
   }, [heatmap.segments, mode]);
 
   const hoveredStop = hovered ? heatmap.stops.find((stop) => stop.stopId === hovered) ?? null : null;
+  const hoveredSegment = hovered
+    ? heatmap.segments.find(
+        (segment) => `${segment.lineId}-${segment.fromStopId}-${segment.toStopId}` === hovered,
+      ) ?? null
+    : null;
   const busiest = worst ? value(worst, mode) : null;
 
   return (
@@ -98,7 +105,7 @@ export function NetworkHeatmap({
           options={MODES}
           size="sm"
         />
-        <span className="ml-auto inline-flex items-center gap-1.5 text-[0.65rem] text-mist-500">
+        <span className="ml-auto inline-flex items-center gap-1.5 text-3xs text-mist-500">
           <Radio className="size-3 text-crowd-low" />
           {heatmap.segments.length} segments · {heatmap.stops.length} stops
         </span>
@@ -113,16 +120,16 @@ export function NetworkHeatmap({
         >
           {/* schematic ground grid */}
           <defs>
-            <pattern id="ops-grid" width="38" height="38" patternUnits="userSpaceOnUse">
+            <pattern id={gridId} width="38" height="38" patternUnits="userSpaceOnUse">
               <path d="M38 0H0V38" fill="none" stroke="rgba(148,163,184,0.09)" strokeWidth="1" />
             </pattern>
-            <radialGradient id="ops-glow" cx="50%" cy="45%" r="65%">
+            <radialGradient id={glowId} cx="50%" cy="45%" r="65%">
               <stop offset="0%" stopColor="rgba(56,245,192,0.07)" />
               <stop offset="100%" stopColor="rgba(2,6,23,0)" />
             </radialGradient>
           </defs>
-          <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="url(#ops-grid)" />
-          <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="url(#ops-glow)" />
+          <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill={`url(#${gridId})`} />
+          <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill={`url(#${glowId})`} />
 
           {/* route segments */}
           {heatmap.segments.map((segment) => {
@@ -136,6 +143,9 @@ export function NetworkHeatmap({
 
             return (
               <g key={key}>
+                <title>
+                  {`Route ${segment.routeNumber} · ${segment.fromName} → ${segment.toName} · ${formatPercent(load.ratio)} ${crowdTone(load.level).label.toLowerCase()}`}
+                </title>
                 <line
                   x1={start.x}
                   y1={start.y}
@@ -212,18 +222,41 @@ export function NetworkHeatmap({
           })}
         </svg>
 
-        {/* worst segment read-out */}
+        <ol className="sr-only">
+          {[...heatmap.segments]
+            .sort((a, b) => value(b, mode).ratio - value(a, mode).ratio)
+            .slice(0, 6)
+            .map((segment) => (
+              <li key={`sr-${segment.lineId}-${segment.fromStopId}-${segment.toStopId}`}>
+                Route {segment.routeNumber}, {segment.fromName} to {segment.toName}:{' '}
+                {formatPercent(value(segment, mode).ratio)}
+              </li>
+            ))}
+        </ol>
+
+        {/* worst segment read-out — swaps to the hovered corridor */}
         {worst && busiest ? (
-          <div className="pointer-events-none absolute top-3 left-3 rounded-xl border border-white/10 bg-ink-950/80 px-3 py-2 backdrop-blur">
-            <p className="flex items-center gap-1.5 text-[0.6rem] tracking-[0.16em] text-mist-500 uppercase">
-              <MapPin className="size-3" />
-              {mode === 'peak' ? 'Busiest corridor today' : 'Busiest corridor now'}
+          <div className="pointer-events-none absolute top-3 left-3 max-w-[16rem] rounded-xl border border-white/10 bg-ink-950/85 px-3 py-2 backdrop-blur">
+            <p className="eyebrow flex items-center gap-1.5 text-mist-500">
+              <MapPin className="size-3" aria-hidden />
+              {hoveredSegment
+                ? 'Hovered corridor'
+                : mode === 'peak'
+                  ? 'Busiest corridor today'
+                  : 'Busiest corridor now'}
             </p>
-            <p className="mt-1 text-xs font-medium text-mist-100">
-              {worst.routeNumber} · {worst.fromName} → {worst.toName}
+            <p className="mt-1.5 truncate text-xs font-medium text-mist-100">
+              {(hoveredSegment ?? worst).routeNumber} · {(hoveredSegment ?? worst).fromName} →{' '}
+              {(hoveredSegment ?? worst).toName}
             </p>
-            <p className={cn('mt-0.5 font-mono text-[0.7rem]', crowdTone(busiest.level).text)}>
-              {formatPercent(busiest.ratio)} · {crowdTone(busiest.level).label}
+            <p
+              className={cn(
+                'figure mt-0.5 text-2xs',
+                crowdTone((hoveredSegment ? value(hoveredSegment, mode) : busiest).level).text,
+              )}
+            >
+              {formatPercent((hoveredSegment ? value(hoveredSegment, mode) : busiest).ratio)} ·{' '}
+              {crowdTone((hoveredSegment ? value(hoveredSegment, mode) : busiest).level).label}
             </p>
           </div>
         ) : null}
@@ -232,7 +265,7 @@ export function NetworkHeatmap({
         {hoveredStop ? (
           <div className="pointer-events-none absolute right-3 bottom-3 max-w-[240px] rounded-xl border border-white/10 bg-ink-950/85 px-3 py-2 backdrop-blur">
             <p className="text-xs font-medium text-mist-100">{hoveredStop.name}</p>
-            <p className="mt-0.5 text-[0.65rem] text-mist-500">
+            <p className="mt-0.5 text-3xs text-mist-500">
               {hoveredStop.interchange ? 'Interchange · ' : ''}
               {hoveredStop.routes.join(' · ')} · {hoveredStop.boardings.toLocaleString()} daily boardings
             </p>
@@ -240,10 +273,10 @@ export function NetworkHeatmap({
               <span
                 className={cn('size-2 rounded-full', crowdTone(stopValue(hoveredStop, mode).level).dot)}
               />
-              <span className="font-mono text-[0.68rem] text-mist-200">
+              <span className="figure text-2xs text-mist-200">
                 {formatPercent(stopValue(hoveredStop, mode).ratio)} now
               </span>
-              <span className="font-mono text-[0.68rem] text-mist-400">
+              <span className="figure text-2xs text-mist-400">
                 {formatPercent(hoveredStop.peakRatio)} peak
               </span>
             </div>
@@ -257,14 +290,14 @@ export function NetworkHeatmap({
           {heatmap.legend.map((entry) => {
             const tone = crowdTone(entry.level);
             return (
-              <span key={entry.level} className="inline-flex items-center gap-1.5 text-[0.65rem] text-mist-400">
+              <span key={entry.level} className="inline-flex items-center gap-1.5 text-3xs text-mist-400">
                 <span className={cn('size-2 rounded-full', tone.dot)} />
                 <span className={cn('font-medium', tone.text)}>{entry.label}</span>
-                <span className="font-mono text-mist-500">{entry.range}</span>
+                <span className="figure text-mist-500">{entry.range}</span>
               </span>
             );
           })}
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[0.65rem] text-mist-500">
+          <span className="ml-auto inline-flex items-center gap-1.5 text-3xs text-mist-500">
             <Layers className="size-3" />
             coloured by {MODES.find((item) => item.value === mode)?.label.toLowerCase()}
           </span>
@@ -275,7 +308,7 @@ export function NetworkHeatmap({
             type="button"
             onClick={() => onSelectRoute(null)}
             className={cn(
-              'rounded-full border px-2.5 py-1 text-[0.65rem] font-medium transition-colors',
+              'rounded-full border px-2.5 py-1 text-3xs font-medium transition-colors',
               selectedRoute === null
                 ? 'border-pulse-400/40 bg-pulse-400/12 text-pulse-200'
                 : 'border-white/10 text-mist-400 hover:text-mist-200',
@@ -293,7 +326,7 @@ export function NetworkHeatmap({
                 type="button"
                 onClick={() => onSelectRoute(active ? null : route)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[0.65rem] transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-3xs transition-colors',
                   active
                     ? 'border-white/25 bg-white/10 text-mist-100'
                     : 'border-white/10 text-mist-400 hover:text-mist-200',
@@ -308,7 +341,7 @@ export function NetworkHeatmap({
                 />
                 {route}
                 {load ? (
-                  <span className={cn('font-mono', crowdTone(load.level).text)}>
+                  <span className={cn('figure', crowdTone(load.level).text)}>
                     {formatPercent(load.ratio)}
                   </span>
                 ) : null}

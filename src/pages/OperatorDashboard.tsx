@@ -25,10 +25,11 @@ import {
 } from '../hooks/useTransitData';
 import { ApiError } from '../lib/api';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
+import { Badge, StatusDot } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { StatTile } from '../components/ui/StatTile';
 import { ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { SectionHeading } from '../components/ui/Section';
 import { NetworkHeatmap, type HeatmapMode } from '../components/operator/NetworkHeatmap';
 import { AiAlertFeed } from '../components/operator/AiAlertFeed';
 import { AiRecommendations } from '../components/operator/AiRecommendations';
@@ -222,10 +223,8 @@ export function OperatorDashboard() {
         <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-ink-950/60 px-3 py-2">
-              <Activity className="size-4 text-pulse-300" />
-              <span className="font-mono text-xs tracking-[0.18em] text-mist-300 uppercase">
-                Operations Control
-              </span>
+              <StatusDot tone={status.tone === 'critical' ? 'critical' : status.tone === 'moderate' ? 'moderate' : 'low'} live />
+              <span className="eyebrow text-mist-300">Operations Control</span>
             </span>
             <Badge tone={status.tone} icon={<StatusIcon className="size-3" />}>
               {status.label}
@@ -244,10 +243,10 @@ export function OperatorDashboard() {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-right">
-              <p className="font-mono text-lg leading-none text-mist-100">
+              <p className="figure text-lg leading-none text-mist-100">
                 {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </p>
-              <p className="mt-1 text-[0.62rem] tracking-wide text-mist-500 uppercase">
+              <p className="eyebrow mt-1 text-mist-500">
                 {now.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
                 {data ? ` · updated ${new Date(data.generatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''}
               </p>
@@ -264,12 +263,12 @@ export function OperatorDashboard() {
         </div>
 
         {data ? (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-white/6 px-4 py-2 text-[0.68rem] text-mist-400">
-            <span>{data.kpis.statusDetail}</span>
-            <span className="font-mono text-mist-500">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-white/6 bg-ink-950/25 px-4 py-2.5 text-2xs text-mist-400">
+            <span className="min-w-0">{data.kpis.statusDetail}</span>
+            <span className="figure text-mist-500">
               engine {data.engine.id} · {data.engine.version}
             </span>
-            <span className="font-mono text-mist-500">
+            <span className="figure text-mist-500">
               thresholds · moderate ≥60% · high ≥{data.crowdingThresholdPct.toFixed(0)}%
             </span>
           </div>
@@ -277,19 +276,25 @@ export function OperatorDashboard() {
       </Card>
 
       {flash ? (
-        <div className="rounded-xl border border-pulse-400/35 bg-pulse-400/10 px-4 py-2.5 text-xs text-pulse-200">
+        <div
+          role="status"
+          className="animate-rise flex items-start gap-2.5 rounded-xl border border-pulse-400/30 bg-pulse-400/[0.09] px-4 py-3 text-xs leading-relaxed text-pulse-100"
+        >
+          <Sparkles className="mt-0.5 size-3.5 shrink-0 text-pulse-300" aria-hidden />
           {flash}
         </div>
       ) : null}
 
       {/* --------------------------------------------------- 1 network overview */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Gauge className="size-4 text-pulse-300" />
-          <h2 className="text-sm font-semibold tracking-wide text-mist-200 uppercase">
-            Network overview
-          </h2>
-        </div>
+      <section aria-labelledby="network-overview" className="space-y-3">
+        <SectionHeading
+          id="network-overview"
+          eyebrow="Section 1"
+          title="Network overview"
+          description="Fleet, crowding and forecast headline figures for the whole simulated network."
+          icon={Gauge}
+          actions={data ? <Badge tone="neutral" size="xs">{data.routes.length} routes monitored</Badge> : undefined}
+        />
 
         {!data ? (
           <PanelSkeleton rows={3} />
@@ -363,15 +368,18 @@ export function OperatorDashboard() {
               ].map((tile) => (
                 <div
                   key={tile.label}
-                  className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3"
+                  className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/14"
                 >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/6 text-mist-300">
+                  <span
+                    className="grid size-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-gradient-to-br from-white/8 to-white/[0.02] text-mist-300"
+                    aria-hidden
+                  >
                     <tile.icon className="size-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[0.62rem] tracking-wider text-mist-500 uppercase">{tile.label}</p>
-                    <p className="font-mono text-sm text-mist-100">{tile.value}</p>
-                    <p className="truncate text-[0.62rem] text-mist-500">{tile.hint}</p>
+                    <p className="eyebrow text-mist-500">{tile.label}</p>
+                    <p className="figure mt-0.5 text-sm text-mist-100">{tile.value}</p>
+                    <p className="truncate text-3xs text-mist-500">{tile.hint}</p>
                   </div>
                 </div>
               ))}
@@ -449,11 +457,9 @@ export function OperatorDashboard() {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <History className="size-3.5 text-mist-400" />
-              <span className="text-[0.62rem] tracking-wider text-mist-500 uppercase">
-                Interventions applied
-              </span>
+              <span className="eyebrow text-mist-500">Interventions applied</span>
               <span className="h-px flex-1 bg-white/8" />
-              <span className="font-mono text-[0.62rem] text-mist-500">
+              <span className="figure text-3xs text-mist-500">
                 {data?.kpis.interventions24h ?? 0} in the last 24 h · ledger ai_decisions
               </span>
             </div>
@@ -567,7 +573,7 @@ export function OperatorDashboard() {
         </CardBody>
       </Card>
 
-      <p className="px-1 text-[0.65rem] leading-relaxed text-mist-600">
+      <p className="px-1 text-3xs leading-relaxed text-mist-600">
         {data?.disclaimer ??
           'Simulated prototype — occupancy, telemetry and weather are synthetic demo data, not real-world measurements.'}
       </p>

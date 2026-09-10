@@ -1,4 +1,10 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import type {
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function Field({
@@ -16,20 +22,22 @@ export function Field({
 }) {
   return (
     <label htmlFor={htmlFor} className={cn('block space-y-1.5', className)}>
-      <span className="flex items-center justify-between gap-2 text-[0.7rem] font-medium tracking-wide text-mist-400 uppercase">
-        {label}
-      </span>
+      <span className="eyebrow flex items-center justify-between gap-2 text-mist-400">{label}</span>
       {children}
-      {hint ? <span className="block text-xs text-mist-500">{hint}</span> : null}
+      {hint ? <span className="block text-2xs leading-relaxed text-mist-500">{hint}</span> : null}
     </label>
   );
 }
 
 const CONTROL =
-  'w-full rounded-xl border border-white/10 bg-ink-900/70 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 transition focus:border-pulse-400/60 focus:bg-ink-900 disabled:opacity-50';
+  'w-full min-h-11 rounded-xl border border-white/10 bg-ink-900/70 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 transition-[border-color,background-color,box-shadow] duration-200 hover:border-white/18 focus:border-pulse-400/60 focus:bg-ink-900 focus-visible:ring-2 focus-visible:ring-pulse-400/40 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...rest} className={cn(CONTROL, className)} />;
+}
+
+export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea {...rest} className={cn(CONTROL, 'min-h-24 resize-y leading-relaxed', className)} />;
 }
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -38,13 +46,19 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export function Select({ options, className, ...rest }: SelectProps) {
   return (
-    <select {...rest} className={cn(CONTROL, 'appearance-none pr-9', className)}>
-      {options.map((option) => (
-        <option key={option.value} value={option.value} disabled={option.disabled}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <span className="relative block">
+      <select {...rest} className={cn(CONTROL, 'appearance-none pr-9', className)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-mist-500"
+        aria-hidden
+      />
+    </span>
   );
 }
 
@@ -62,10 +76,10 @@ export function Toggle({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/14">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-mist-100">{label}</p>
-        {description ? <p className="mt-0.5 text-xs text-mist-400">{description}</p> : null}
+        <p className="text-[0.82rem] font-medium text-mist-100">{label}</p>
+        {description ? <p className="mt-1 text-2xs leading-relaxed text-mist-400">{description}</p> : null}
       </div>
       <button
         type="button"
@@ -75,20 +89,20 @@ export function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-300',
-          checked
-            ? 'border-pulse-400/60 bg-pulse-400/30'
-            : 'border-white/12 bg-white/8',
-          disabled && 'opacity-50',
+          'relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors duration-300',
+          'focus-visible:ring-2 focus-visible:ring-pulse-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
+          checked ? 'border-pulse-400/60 bg-pulse-400/30' : 'border-white/12 bg-white/8 hover:border-white/20',
+          disabled && 'cursor-not-allowed opacity-50',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 size-4.5 rounded-full transition-all duration-300',
+            'absolute top-0.5 size-[1.1rem] rounded-full transition-all duration-300',
             checked
-              ? 'left-[1.45rem] bg-pulse-300 shadow-[0_0_12px_rgba(56,245,192,0.8)]'
+              ? 'left-[1.5rem] bg-pulse-300 shadow-[0_0_12px_rgba(56,245,192,0.8)]'
               : 'left-0.5 bg-mist-400',
           )}
+          aria-hidden
         />
       </button>
     </div>
@@ -125,7 +139,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(option.value)}
           className={cn(
             'inline-flex shrink-0 items-center gap-1.5 rounded-lg font-medium transition-all duration-200',
-            size === 'sm' ? 'px-2.5 py-1.5 text-[0.7rem]' : 'px-3.5 py-2 text-xs',
+            size === 'sm' ? 'px-2.5 py-1.5 text-2xs' : 'px-3.5 py-2 text-xs',
             value === option.value
               ? 'bg-white/12 text-mist-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]'
               : 'text-mist-400 hover:text-mist-200',
@@ -161,7 +175,7 @@ export function Slider({
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-mist-300">{label}</span>
-        <span className="font-mono text-mist-200">{format ? format(value) : value}</span>
+        <span className="figure text-mist-200">{format ? format(value) : value}</span>
       </div>
       <input
         type="range"

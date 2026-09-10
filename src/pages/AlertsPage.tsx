@@ -11,8 +11,10 @@ import {
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { Field, Input, Segmented, Select } from '../components/ui/Controls';
+import { Field, Input, Segmented, Select, Textarea } from '../components/ui/Controls';
 import { EmptyState, ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { SectionHeading } from '../components/ui/Section';
+import { StatTile } from '../components/ui/StatTile';
 import { LivePill } from '../components/crowd/CrowdHotspotList';
 import { cn, formatDateTime, formatNumber, formatRelative, severityTone } from '../lib/utils';
 
@@ -55,18 +57,48 @@ export function AlertsPage() {
   );
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryTile label="Active" value={grouped.active.length} tone="critical" icon={<Radio className="size-4" />} />
-        <SummaryTile label="Scheduled" value={grouped.scheduled.length} tone="moderate" icon={<BellRing className="size-4" />} />
-        <SummaryTile label="Resolved" value={grouped.resolved.length} tone="low" icon={<Filter className="size-4" />} />
-        <SummaryTile
-          label="Riders reached"
-          value={formatNumber(reach)}
-          tone="pulse"
-          icon={<Megaphone className="size-4" />}
+    <div className="space-y-6">
+      <section aria-labelledby="alert-summary" className="space-y-3">
+        <SectionHeading
+          id="alert-summary"
+          eyebrow="Operations"
+          title="Notice overview"
+          description="Every notice the control room has published, with the rider reach behind it."
+          icon={BellRing}
+          actions={<LivePill label="Live" />}
         />
-      </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile
+            label="Active"
+            value={grouped.active.length}
+            icon={Radio}
+            accent="critical"
+            tone="negative"
+            hint="Notices currently reaching riders"
+          />
+          <StatTile
+            label="Scheduled"
+            value={grouped.scheduled.length}
+            icon={BellRing}
+            accent="warning"
+            hint="Queued to go live later"
+          />
+          <StatTile
+            label="Resolved"
+            value={grouped.resolved.length}
+            icon={Filter}
+            accent="none"
+            hint="Closed notices kept for the record"
+          />
+          <StatTile
+            label="Riders reached"
+            value={formatNumber(reach)}
+            icon={Megaphone}
+            accent="pulse"
+            hint="Sum of estimated reach across the visible notices"
+          />
+        </div>
+      </section>
 
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <Card>
@@ -124,12 +156,17 @@ export function AlertsPage() {
                     <li
                       key={alert.id}
                       className={cn(
-                        'animate-rise rounded-xl border px-4 py-3.5 transition-colors',
+                        'animate-rise relative overflow-hidden rounded-xl border px-4 py-3.5 transition-colors',
                         alert.status === 'resolved'
                           ? 'border-white/8 bg-white/[0.015] opacity-70'
                           : cn(tone.border, tone.bg),
                       )}
                     >
+                      <span
+                        aria-hidden
+                        className="absolute inset-y-0 left-0 w-[3px]"
+                        style={{ backgroundColor: tone.stroke }}
+                      />
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge tone={alert.severity === 'info' ? 'info' : alert.severity === 'minor' ? 'moderate' : alert.severity === 'major' ? 'high' : 'critical'} size="xs">
@@ -139,7 +176,7 @@ export function AlertsPage() {
                             {CATEGORY_LABELS[alert.category]}
                           </Badge>
                           {alert.lineCode ? (
-                            <span className="inline-flex items-center gap-1.5 text-[0.65rem] text-mist-300">
+                            <span className="inline-flex items-center gap-1.5 text-3xs text-mist-300">
                               <span
                                 className="size-2 rounded-full"
                                 style={{ backgroundColor: alert.lineColor ?? '#38bdf8' }}
@@ -147,14 +184,14 @@ export function AlertsPage() {
                               {alert.lineCode}
                             </span>
                           ) : (
-                            <span className="text-[0.65rem] text-mist-500">Network-wide</span>
+                            <span className="text-3xs text-mist-500">Network-wide</span>
                           )}
                           {alert.stopName ? (
-                            <span className="text-[0.65rem] text-mist-500">· {alert.stopName}</span>
+                            <span className="text-3xs text-mist-500">· {alert.stopName}</span>
                           ) : null}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[0.62rem] text-mist-500">
+                          <span className="figure text-3xs text-mist-500">
                             {alert.status === 'resolved'
                               ? `resolved ${formatRelative(alert.endsAt)}`
                               : `started ${formatRelative(alert.startsAt)}`}
@@ -193,8 +230,8 @@ export function AlertsPage() {
                         </div>
                       </div>
                       <p className="mt-2 text-sm font-medium text-mist-100">{alert.title}</p>
-                      <p className="mt-1 text-[0.72rem] leading-relaxed text-mist-300">{alert.body}</p>
-                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.65rem] text-mist-500">
+                      <p className="mt-1 text-xs leading-relaxed text-mist-300">{alert.body}</p>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-3xs text-mist-500">
                         <span>
                           {alert.status === 'scheduled'
                             ? `Goes live ${formatDateTime(alert.startsAt)}`
@@ -236,9 +273,9 @@ export function AlertsPage() {
                 );
                 return (
                   <div key={level} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[0.7rem]">
+                    <div className="flex items-center justify-between text-2xs">
                       <span className={tone.text}>{tone.label}</span>
-                      <span className="font-mono text-mist-400">{count}</span>
+                      <span className="figure text-mist-400">{count}</span>
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
                       <div
@@ -258,7 +295,7 @@ export function AlertsPage() {
               subtitle="How a notice reaches riders"
               icon={<Send className="size-4" />}
             />
-            <CardBody className="space-y-2.5 text-[0.7rem] text-mist-400">
+            <CardBody className="space-y-2.5 text-2xs text-mist-400">
               <PipelineStep
                 step="1"
                 title="Detection"
@@ -282,39 +319,10 @@ export function AlertsPage() {
   );
 }
 
-function SummaryTile({
-  label,
-  value,
-  tone,
-  icon,
-}: {
-  label: string;
-  value: number | string;
-  tone: 'critical' | 'moderate' | 'low' | 'pulse';
-  icon: React.ReactNode;
-}) {
-  const toneClass = {
-    critical: 'text-crowd-critical border-crowd-critical/30 bg-crowd-critical/10',
-    moderate: 'text-crowd-moderate border-crowd-moderate/30 bg-crowd-moderate/10',
-    low: 'text-crowd-low border-crowd-low/30 bg-crowd-low/10',
-    pulse: 'text-pulse-300 border-pulse-400/30 bg-pulse-400/10',
-  }[tone];
-
-  return (
-    <Card className="flex items-center gap-3 p-4">
-      <span className={cn('grid size-9 place-items-center rounded-xl border', toneClass)}>{icon}</span>
-      <div>
-        <p className="text-[0.62rem] tracking-wider text-mist-500 uppercase">{label}</p>
-        <p className="font-display text-xl font-semibold text-mist-100">{value}</p>
-      </div>
-    </Card>
-  );
-}
-
 function PipelineStep({ step, title, detail }: { step: string; title: string; detail: string }) {
   return (
     <div className="flex gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
-      <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 font-mono text-[0.65rem] text-pulse-300">
+      <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 figure text-3xs text-pulse-300">
         {step}
       </span>
       <div>
@@ -378,6 +386,12 @@ function AlertComposer({ onDone }: { onDone: () => void }) {
         subtitle="Written to the alerts table and picked up by every rider screen"
         icon={<Plus className="size-4" />}
       />
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
       <CardBody className="space-y-3">
         <Field label="Title">
           <Input
@@ -387,12 +401,11 @@ function AlertComposer({ onDone }: { onDone: () => void }) {
           />
         </Field>
         <Field label="Details">
-          <textarea
+          <Textarea
             value={form.body}
             rows={3}
             placeholder="What riders should know and do."
             onChange={(event) => setForm({ ...form, body: event.target.value })}
-            className="w-full rounded-xl border border-white/10 bg-ink-900/70 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 focus:border-pulse-400/60 focus:outline-none"
           />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -447,23 +460,31 @@ function AlertComposer({ onDone }: { onDone: () => void }) {
           />
         </Field>
 
-        {error ? <p className="text-xs text-crowd-critical">{error}</p> : null}
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-lg border border-crowd-critical/30 bg-crowd-critical/[0.08] px-3 py-2 text-xs text-crowd-critical"
+          >
+            {error}
+          </p>
+        ) : null}
 
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="ghost" onClick={onDone}>
+          <Button size="sm" variant="ghost" type="button" onClick={onDone}>
             Cancel
           </Button>
           <Button
             size="sm"
+            type="submit"
             variant="primary"
             loading={createAlert.isPending}
             icon={<Send className="size-3.5" />}
-            onClick={() => void submit()}
           >
             Publish notice
           </Button>
         </div>
       </CardBody>
+      </form>
     </Card>
   );
 }

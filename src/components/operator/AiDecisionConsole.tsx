@@ -118,10 +118,10 @@ function ImpactBar({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[0.68rem] tracking-wider text-mist-400 uppercase">{label}</span>
+        <span className="eyebrow text-mist-400">{label}</span>
         <span
           className={cn(
-            'font-mono text-sm',
+            'figure text-sm',
             tone === 'critical' ? 'text-crowd-critical' : 'text-crowd-low',
           )}
         >
@@ -144,7 +144,7 @@ function ImpactBar({
           />
         ) : null}
       </div>
-      {hint ? <p className="text-[0.62rem] text-mist-500">{hint}</p> : null}
+      {hint ? <p className="text-3xs text-mist-500">{hint}</p> : null}
     </div>
   );
 }
@@ -202,10 +202,10 @@ function ScanChart({
   return (
     <div className="mt-4 rounded-xl border border-white/8 bg-ink-950/50 px-3 pt-3 pb-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[0.62rem] tracking-wider text-mist-500 uppercase">
+        <span className="eyebrow text-mist-500">
           Engine scan · predicted load
         </span>
-        <span className="font-mono text-[0.62rem] text-mist-500">
+        <span className="figure text-3xs text-mist-500">
           +0 → +{geometry.maxMinutes} min · threshold {thresholdPct.toFixed(0)}%
         </span>
       </div>
@@ -358,7 +358,7 @@ export function AiDecisionConsole({
             </Badge>
             <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-ink-950/60 px-2 py-1">
               <span className="size-2 rounded-full" style={{ backgroundColor: proposal.color }} />
-              <span className="font-mono text-xs text-mist-200">{title}</span>
+              <span className="figure text-xs text-mist-200">{title}</span>
             </span>
             <Badge tone="neutral" size="xs" icon={<FlaskConical className="size-3" />}>
               Simulation Mode · simulated projection
@@ -370,7 +370,7 @@ export function AiDecisionConsole({
             ) : null}
           </div>
           <p className="max-w-3xl text-sm text-mist-200">{proposal.headline}</p>
-          <p className="font-mono text-[0.62rem] text-mist-500">{proposal.detectionNote}</p>
+          <p className="figure text-3xs text-mist-500">{proposal.detectionNote}</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -391,14 +391,14 @@ export function AiDecisionConsole({
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
-                'font-mono text-[0.68rem] tracking-[0.22em] uppercase',
+                'figure text-2xs tracking-[0.22em] uppercase',
                 proposal.kind === 'congestion' ? 'text-crowd-critical' : 'text-crowd-moderate',
               )}
             >
               {proposal.kind === 'congestion' ? 'AI Detected Congestion' : 'AI Risk Forecast'}
             </span>
             <span className="h-px flex-1 bg-white/8" />
-            <span className="font-mono text-[0.62rem] text-mist-500">{proposal.basisLabel}</span>
+            <span className="figure text-3xs text-mist-500">{proposal.basisLabel}</span>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -441,12 +441,12 @@ export function AiDecisionConsole({
               >
                 <div className="flex items-center gap-2 text-mist-500">
                   <tile.icon className="size-3.5" />
-                  <span className="text-[0.62rem] tracking-wider uppercase">{tile.label}</span>
+                  <span className="eyebrow">{tile.label}</span>
                 </div>
-                <p className={cn('mt-1.5 font-mono text-xl leading-none', LEVEL_TEXT[tile.level ?? 'none'])}>
+                <p className={cn('mt-1.5 figure text-xl leading-none', LEVEL_TEXT[tile.level ?? 'none'])}>
                   {tile.value}
                 </p>
-                <p className="mt-1 truncate text-[0.62rem] text-mist-500">{tile.hint}</p>
+                <p className="mt-1 truncate text-3xs text-mist-500">{tile.hint}</p>
                 {tile.level && tile.ratio !== undefined ? (
                   <div className="mt-2">
                     <CrowdMeter ratio={tile.ratio} level={tile.level} height="sm" showTicks={false} />
@@ -466,11 +466,11 @@ export function AiDecisionConsole({
         {/* -------------------------------------------- AI RECOMMENDED ACTION */}
         <section className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[0.68rem] tracking-[0.22em] text-pulse-200 uppercase">
+            <span className="figure text-2xs tracking-[0.22em] text-pulse-200 uppercase">
               AI Recommended Action
             </span>
             <span className="h-px flex-1 bg-white/8" />
-            <span className="font-mono text-[0.62rem] text-mist-500">
+            <span className="figure text-3xs text-mist-500">
               {actions.length} play(s) · {proposal.reserveVehicles} reserve unit(s)
             </span>
           </div>
@@ -485,7 +485,7 @@ export function AiDecisionConsole({
                 >
                   <span
                     className={cn(
-                      'mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border font-mono text-[0.68rem]',
+                      'mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border figure text-2xs',
                       action.applied
                         ? 'border-crowd-low/50 bg-crowd-low/15 text-crowd-low'
                         : 'border-white/15 bg-white/6 text-mist-300',
@@ -501,7 +501,7 @@ export function AiDecisionConsole({
                         −{action.expectedReliefPct.toFixed(1)} pts
                       </Badge>
                       {action.targetLabel ? (
-                        <span className="font-mono text-[0.62rem] text-mist-500">
+                        <span className="figure text-3xs text-mist-500">
                           target · {action.targetLabel}
                         </span>
                       ) : null}
@@ -512,7 +512,7 @@ export function AiDecisionConsole({
                         {action.evidence.map((item) => (
                           <span
                             key={`${action.key}-${item.label}`}
-                            className="rounded-md border border-white/8 bg-ink-950/40 px-2 py-0.5 font-mono text-[0.6rem] text-mist-400"
+                            className="rounded-md border border-white/8 bg-ink-950/40 px-2 py-0.5 figure text-3xs text-mist-400"
                           >
                             {item.label}: <span className="text-mist-200">{item.value}</span>
                           </span>
@@ -529,7 +529,7 @@ export function AiDecisionConsole({
         {/* -------------------------------------------------- EXPECTED IMPACT */}
         <section className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[0.68rem] tracking-[0.22em] text-mist-200 uppercase">
+            <span className="figure text-2xs tracking-[0.22em] text-mist-200 uppercase">
               Expected impact
             </span>
             <span className="h-px flex-1 bg-white/8" />
@@ -556,12 +556,12 @@ export function AiDecisionConsole({
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/8 bg-ink-950/40 px-3.5 py-2.5">
-            <span className="inline-flex items-center gap-1.5 text-[0.68rem] text-crowd-moderate">
+            <span className="inline-flex items-center gap-1.5 text-2xs text-crowd-moderate">
               <ArrowRight className="size-3.5" />
               {confirmedPct.toFixed(1)}% → {impact.withPct.toFixed(1)}% projected
             </span>
-            <span className="text-[0.62rem] text-mist-500">{impact.method}</span>
-            <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[0.6rem] tracking-wider text-mist-400 uppercase">
+            <span className="text-3xs text-mist-500">{impact.method}</span>
+            <span className="ml-auto inline-flex items-center gap-1.5 eyebrow text-mist-400">
               <FlaskConical className="size-3" />
               Simulated projection · not a measurement
             </span>
@@ -592,7 +592,7 @@ export function AiDecisionConsole({
                 <p className="text-xs text-mist-400">
                   {proposal.routeNumber} projected from {applied.decision.impact.withoutPct.toFixed(1)}% to{' '}
                   {applied.decision.impact.withPct.toFixed(1)}% occupancy · decision{' '}
-                  <span className="font-mono text-mist-300">{applied.effects.decisionId}</span>
+                  <span className="figure text-mist-300">{applied.effects.decisionId}</span>
                 </p>
               </div>
             </div>
@@ -603,8 +603,8 @@ export function AiDecisionConsole({
                   key={delta.label}
                   className="rounded-xl border border-white/8 bg-ink-950/40 px-3 py-2.5"
                 >
-                  <p className="text-[0.62rem] tracking-wider text-mist-500 uppercase">{delta.label}</p>
-                  <p className="mt-1 font-mono text-sm text-mist-100">
+                  <p className="eyebrow text-mist-500">{delta.label}</p>
+                  <p className="mt-1 figure text-sm text-mist-100">
                     {delta.before}
                     {'unit' in delta && delta.unit ? delta.unit : ''}
                     {delta.after !== delta.before ? (
@@ -626,7 +626,7 @@ export function AiDecisionConsole({
                 <li className="flex items-center gap-2">
                   <BusFront className="size-3.5 text-pulse-300" />
                   {applied.effects.vehicle.created ? 'Standby unit created' : 'Reserve unit released'} ·{' '}
-                  <span className="font-mono text-mist-100">{applied.effects.vehicle.code}</span>
+                  <span className="figure text-mist-100">{applied.effects.vehicle.code}</span>
                   {applied.effects.vehicle.previousStatus
                     ? ` (${applied.effects.vehicle.previousStatus.replace('_', ' ')} → in service${
                         applied.effects.vehicle.previousLineCode
@@ -639,13 +639,13 @@ export function AiDecisionConsole({
               <li className="flex items-center gap-2">
                 <AlertTriangle className="size-3.5 text-crowd-moderate" />
                 Rider alert raised ·{' '}
-                <span className="font-mono text-mist-100">{applied.effects.alert.id}</span> ·{' '}
+                <span className="figure text-mist-100">{applied.effects.alert.id}</span> ·{' '}
                 {applied.effects.alert.severity} · {applied.effects.alert.category}
               </li>
               <li className="flex items-center gap-2">
                 <BadgeCheck className="size-3.5 text-crowd-low" />
                 Ledger written ·{' '}
-                <span className="font-mono text-mist-100">
+                <span className="figure text-mist-100">
                   ai_decisions + {actions.length} ai_decision_actions
                 </span>{' '}
                 · visible in the Data Explorer
@@ -683,9 +683,9 @@ export function AiDecisionConsole({
               >
                 {isApplying ? 'Applying intervention…' : 'Apply AI Recommendation'}
               </Button>
-              <span className="text-[0.62rem] leading-relaxed text-mist-500">
+              <span className="text-3xs leading-relaxed text-mist-500">
                 Writes the decision ledger, releases{' '}
-                <span className="font-mono text-mist-400">
+                <span className="figure text-mist-400">
                   {actions[0]?.targetLabel ?? 'a reserve unit'}
                 </span>{' '}
                 to {proposal.routeNumber} and raises the rider alert.
@@ -724,9 +724,9 @@ export function InterventionHistory({
           <div className="flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-2">
               <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="font-mono text-mist-200">{item.routeNumber}</span>
+              <span className="figure text-mist-200">{item.routeNumber}</span>
             </span>
-            <span className="font-mono text-[0.62rem] text-mist-500">
+            <span className="figure text-3xs text-mist-500">
               {item.appliedAt ? formatClock(item.appliedAt) : '—'}
             </span>
           </div>
@@ -734,7 +734,7 @@ export function InterventionHistory({
             {item.predictedPct.toFixed(0)}% → {item.projectedPct.toFixed(0)}% projected ·{' '}
             {item.actionCount} action(s)
           </p>
-          <p className="mt-1 flex items-center gap-2 font-mono text-[0.6rem] text-mist-500">
+          <p className="mt-1 flex items-center gap-2 figure text-3xs text-mist-500">
             <span>{item.id}</span>
             {item.vehicleCode ? <span>· {item.vehicleCode}</span> : null}
             {item.alertId ? <span>· {item.alertId}</span> : null}

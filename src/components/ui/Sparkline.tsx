@@ -26,7 +26,7 @@ export function Sparkline({
   if (points.length < 2) {
     return (
       <div
-        className={cn('flex items-center text-[0.65rem] text-mist-500', className)}
+        className={cn('flex items-center text-3xs text-mist-500', className)}
         style={{ height }}
       >
         —

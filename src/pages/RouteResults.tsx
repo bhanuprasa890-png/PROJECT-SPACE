@@ -18,6 +18,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Segmented } from '../components/ui/Controls';
+import { Metric, SectionHeading } from '../components/ui/Section';
 import { AiAnalyzing } from '../components/route/AiAnalyzing';
 import { CrowdLegend } from '../components/crowd/CrowdIndicators';
 import { useMinimumLoading } from '../hooks/useUi';
@@ -26,6 +27,13 @@ import { LivePill } from '../components/crowd/CrowdHotspotList';
 import { cn, formatClock, formatDuration, formatPercent } from '../lib/utils';
 
 type SortMode = 'recommended' | RecommendationKind | 'quietest';
+
+const SORTS: { value: SortMode; label: string }[] = [
+  { value: 'recommended', label: 'AI Recommended' },
+  { value: 'fastest', label: 'Fastest' },
+  { value: 'quietest', label: 'Least crowded' },
+  { value: 'fewest_transfers', label: 'Fewest changes' },
+];
 
 export function RouteResults() {
   const navigate = useNavigate();
@@ -129,12 +137,14 @@ export function RouteResults() {
       />
 
       {plan.data?.serviceNote ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-400/8 px-4 py-3 text-xs text-sky-200">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-sky-400/25 bg-sky-400/[0.07] px-4 py-3">
           <Badge tone="info" size="xs" icon={<CalendarClock className="size-3" />}>
             Next service
           </Badge>
-          <span className="text-mist-200">{plan.data.serviceNote}</span>
-          <span className="font-mono text-mist-400">
+          <span className="min-w-0 flex-1 text-xs leading-relaxed text-mist-200">
+            {plan.data.serviceNote}
+          </span>
+          <span className="figure text-2xs text-mist-400">
             boarding {formatClock(plan.data.serviceResumesAt ?? plan.data.departAfter)}
           </span>
         </div>
@@ -144,7 +154,7 @@ export function RouteResults() {
         <EmptyState
           icon={<Compass className="size-5" />}
           title="Choose a start and end stop"
-          description="TransitPulse will generate crowd-aware itineraries using the timetable and the live crowd model."
+          description="TransitPulse will generate crowd-aware itineraries using the timetable and the live crowd model. Try Pune or Tambaram below the search box for a one-tap demo."
         />
       ) : plan.isError ? (
         <ErrorState
@@ -158,6 +168,7 @@ export function RouteResults() {
         <EmptyState
           title="No service found"
           description={plan.data.insights[0] ?? 'Try increasing the number of allowed changes.'}
+          icon={<Compass className="size-5" />}
           action={
             <Button
               size="sm"
@@ -173,47 +184,41 @@ export function RouteResults() {
           }
         />
       ) : plan.data ? (
-        <div className="grid gap-5 xl:grid-cols-[1.65fr_1fr]">
+        <div className="grid gap-5 xl:grid-cols-[1.7fr_1fr]">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-mist-100">
-                  {plan.data.options.length} crowd-aware route
-                  {plan.data.options.length === 1 ? '' : 's'}
-                </h2>
-                <p className="mt-0.5 text-xs text-mist-400">
-                  {plan.data.origin.name} → {plan.data.destination.name} · departing{' '}
-                  {formatClock(plan.data.departAfter)}
-                  {avoidCrowding ? ' · crowding weighted' : ' · time only'}
-                </p>
-                <CrowdLegend className="mt-2.5" />
+            {/* -------------------------------------------------- results header */}
+            <Card tone="quiet" className="p-4">
+              <SectionHeading
+                eyebrow={`${plan.data.origin.name} → ${plan.data.destination.name}`}
+                title={`${plan.data.options.length} crowd-aware route${plan.data.options.length === 1 ? '' : 's'}`}
+                description={`Departing ${formatClock(plan.data.departAfter)}${
+                  avoidCrowding ? ' · crowding weighted' : ' · time only'
+                } · scored by ${plan.data.modelVersion}`}
+                icon={Sparkles}
+                actions={
+                  <Segmented<SortMode> size="sm" value={sort} onChange={setSort} options={SORTS} />
+                }
+              />
+              <div className="mt-3.5 border-t border-white/6 pt-3">
+                <CrowdLegend />
               </div>
-              <Segmented<SortMode>
-                size="sm"
-                value={sort}
-                onChange={setSort}
-                options={[
-                  { value: 'recommended', label: 'AI Recommended' },
-                  { value: 'fastest', label: 'Fastest' },
-                  { value: 'quietest', label: 'Least crowded' },
-                  { value: 'fewest_transfers', label: 'Fewest changes' },
-                ]}
-              />
-            </div>
+            </Card>
 
-            {options.map((option, index) => (
-              <RouteOptionCard
-                key={option.id}
-                option={option}
-                isRecommended={option.id === plan.data?.recommendedOptionId}
-                defaultOpen={option.kind === 'best'}
-                onOpen={() => openDetails(option)}
-                style={{ animationDelay: `${index * 70}ms` }}
-              />
-            ))}
+            <div className="space-y-3.5">
+              {options.map((option, index) => (
+                <RouteOptionCard
+                  key={option.id}
+                  option={option}
+                  isRecommended={option.id === plan.data?.recommendedOptionId}
+                  defaultOpen={option.kind === 'best' && options.length <= 4}
+                  onOpen={() => openDetails(option)}
+                  style={{ animationDelay: `${index * 70}ms` }}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Side rail: why these options, and what they avoid */}
+          {/* --------------------------- side rail: why, and what it avoids ---- */}
           <div className="space-y-4">
             <Card accent="pulse">
               <CardHeader
@@ -224,12 +229,12 @@ export function RouteResults() {
               />
               <CardBody className="space-y-3">
                 {recommended ? (
-                  <div className="rounded-xl border border-pulse-400/25 bg-pulse-400/8 px-3.5 py-3">
-                    <p className="text-sm leading-relaxed text-mist-100">{recommended.headline}</p>
-                    <ul className="mt-2 space-y-1">
+                  <div className="rounded-xl border border-pulse-400/22 bg-pulse-400/[0.07] px-3.5 py-3">
+                    <p className="text-[0.82rem] leading-relaxed text-mist-100">{recommended.headline}</p>
+                    <ul className="mt-2.5 space-y-1.5">
                       {recommended.rationale.map((line) => (
-                        <li key={line} className="flex gap-2 text-[0.7rem] leading-relaxed text-mist-300">
-                          <span className="mt-1.5 size-1 shrink-0 rounded-full bg-pulse-400" />
+                        <li key={line} className="flex gap-2 text-2xs leading-relaxed text-mist-300">
+                          <span className="mt-1.5 size-1 shrink-0 rounded-full bg-pulse-400" aria-hidden />
                           {line}
                         </li>
                       ))}
@@ -238,22 +243,20 @@ export function RouteResults() {
                 ) : null}
 
                 {recommended && worst && worst.id !== recommended.id ? (
-                  <div className="rounded-xl border border-crowd-critical/20 bg-crowd-critical/8 px-3.5 py-3">
-                    <p className="flex items-center gap-2 text-[0.7rem] font-semibold text-crowd-critical">
-                      <TriangleAlert className="size-3.5" />
+                  <div className="rounded-xl border border-crowd-critical/20 bg-crowd-critical/[0.07] px-3.5 py-3">
+                    <p className="flex items-center gap-2 text-2xs font-semibold tracking-wide text-crowd-critical uppercase">
+                      <TriangleAlert className="size-3.5" aria-hidden />
                       What you avoid
                     </p>
-                    <p className="mt-1.5 text-[0.72rem] leading-relaxed text-mist-300">
+                    <p className="mt-1.5 text-2xs leading-relaxed text-mist-300">
                       The busiest itinerary on this corridor peaks at{' '}
-                      <span className="font-mono text-mist-100">
-                        {formatPercent(worst.crowdRisk)}
-                      </span>{' '}
-                      — about{' '}
-                      <span className="font-mono text-crowd-low">
+                      <span className="figure text-mist-100">{formatPercent(worst.crowdRisk)}</span> —
+                      about{' '}
+                      <span className="figure text-crowd-low">
                         {Math.round(recommended.crowdingAvoidedPct)}%
                       </span>{' '}
                       busier than the recommendation, for{' '}
-                      {Math.abs(worst.totalMinutes - recommended.totalMinutes)} min{' '}
+                      <span className="figure">{Math.abs(worst.totalMinutes - recommended.totalMinutes)} min</span>{' '}
                       {worst.totalMinutes < recommended.totalMinutes ? 'saved' : 'extra'}.
                     </p>
                   </div>
@@ -263,9 +266,9 @@ export function RouteResults() {
                   {plan.data.insights.map((insight) => (
                     <li
                       key={insight}
-                      className="flex gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 text-[0.72rem] leading-relaxed text-mist-300"
+                      className="flex gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 text-2xs leading-relaxed text-mist-300"
                     >
-                      <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-crowd-moderate" />
+                      <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-crowd-moderate" aria-hidden />
                       {insight}
                     </li>
                   ))}
@@ -279,9 +282,9 @@ export function RouteResults() {
                 subtitle="Occupancy is riders on board ÷ vehicle capacity"
                 icon={<Info className="size-4" />}
               />
-              <CardBody className="space-y-3">
+              <CardBody className="space-y-3.5">
                 <CrowdLegend />
-                <div className="grid grid-cols-2 gap-2 text-[0.68rem]">
+                <div className="grid grid-cols-2 gap-2">
                   <Metric
                     label="Recommended peak"
                     value={recommended ? formatPercent(recommended.crowdRisk) : '—'}
@@ -290,7 +293,7 @@ export function RouteResults() {
                   <Metric
                     label="Busiest option"
                     value={worst ? formatPercent(worst.crowdRisk) : '—'}
-                    tone="critical"
+                    tone="high"
                   />
                   <Metric
                     label="Recommended time"
@@ -321,21 +324,22 @@ export function RouteResults() {
                     type="button"
                     onClick={() => {
                       const params = new URLSearchParams(searchParams);
-                      params.set(
-                        'departAfter',
-                        new Date(Date.now() + offset * 60000).toISOString(),
-                      );
+                      params.set('departAfter', new Date(Date.now() + offset * 60000).toISOString());
                       setSearchParams(params);
                     }}
-                    className="flex w-full items-center justify-between rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-pulse-400/40 hover:bg-white/[0.05]"
+                    className={cn(
+                      'group flex w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 text-left',
+                      'transition-[border-color,background-color,transform] duration-200 hover:-translate-y-px hover:border-pulse-400/40 hover:bg-white/[0.05]',
+                    )}
                   >
-                    <span className="text-xs text-mist-200">
-                      Leave in {offset} minutes
-                    </span>
-                    <ArrowRight className="size-3.5 text-mist-500" />
+                    <span className="text-xs text-mist-200">Leave in {offset} minutes</span>
+                    <ArrowRight
+                      className="size-3.5 text-mist-500 transition-colors group-hover:text-pulse-300"
+                      aria-hidden
+                    />
                   </button>
                 ))}
-                <p className="pt-1 text-[0.68rem] leading-relaxed text-mist-500">
+                <p className="pt-1 text-3xs leading-relaxed text-mist-500">
                   Re-planning shows whether waiting for the next service buys a quieter carriage.
                 </p>
               </CardBody>
@@ -346,20 +350,3 @@ export function RouteResults() {
     </div>
   );
 }
-
-function Metric({ label, value, tone }: { label: string; value: string; tone?: 'low' | 'critical' }) {
-  return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-      <p className="text-[0.62rem] tracking-wider text-mist-500 uppercase">{label}</p>
-      <p
-        className={cn(
-          'mt-0.5 font-mono text-sm',
-          tone === 'low' ? 'text-crowd-low' : tone === 'critical' ? 'text-crowd-critical' : 'text-mist-100',
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-

@@ -30,8 +30,8 @@ export function ScoreBreakdown({
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="font-mono text-[0.7rem] text-mist-400">{SCORE_FORMULA}</span>
-        <span className="font-mono text-[0.7rem] text-mist-600">= route score</span>
+        <span className="figure text-2xs text-mist-400">{SCORE_FORMULA}</span>
+        <span className="figure text-2xs text-mist-600">= route score</span>
       </div>
 
       {/* stacked bar: one segment per score term */}
@@ -53,23 +53,23 @@ export function ScoreBreakdown({
             className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2"
             title={term.hint}
           >
-            <p className="flex items-center gap-1.5 text-[0.65rem] tracking-wide text-mist-400 uppercase">
+            <p className="flex items-center gap-1.5 text-3xs tracking-wide text-mist-400 uppercase">
               <span className={cn('size-1.5 rounded-full', term.bar)} />
               {term.label}
             </p>
-            <p className="mt-1 font-mono text-sm text-mist-100">{formatScore(value)}</p>
-            <p className="font-mono text-[0.6rem] text-mist-600">{pct}% of score</p>
+            <p className="mt-1 figure text-sm text-mist-100">{formatScore(value)}</p>
+            <p className="figure text-3xs text-mist-600">{pct}% of score</p>
           </li>
         ))}
       </ul>
 
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-pulse-400/25 bg-pulse-400/8 px-3 py-2">
-        <span className="text-[0.7rem] font-medium text-pulse-100">Overall route score</span>
+        <span className="text-2xs font-medium text-pulse-100">Overall route score</span>
         <span className="flex items-baseline gap-2">
           {delta !== null && delta !== 0 && (
             <span
               className={cn(
-                'inline-flex items-center gap-1 font-mono text-[0.7rem]',
+                'inline-flex items-center gap-1 figure text-2xs',
                 delta < 0 ? 'text-crowd-low' : 'text-crowd-moderate',
               )}
             >
@@ -78,11 +78,11 @@ export function ScoreBreakdown({
               {delta} min vs recommended
             </span>
           )}
-          <span className="font-mono text-base font-semibold text-mist-50">{formatScore(total)}</span>
+          <span className="figure text-base font-semibold text-mist-50">{formatScore(total)}</span>
         </span>
       </div>
 
-      <p className="flex items-start gap-1.5 text-[0.65rem] leading-relaxed text-mist-500">
+      <p className="flex items-start gap-1.5 text-3xs leading-relaxed text-mist-500">
         <Info className="mt-0.5 size-3 shrink-0" />
         Lower is better. Crowd penalty converts predicted crowding into extra minutes, weighted by your
         crowd tolerance, so a comfortable ride can out-score a faster packed one.

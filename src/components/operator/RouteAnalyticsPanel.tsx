@@ -106,7 +106,7 @@ export function RouteAnalyticsPanel({
               type="button"
               onClick={() => onSelectRoute(item.routeNumber)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[0.65rem] transition-colors',
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 figure text-3xs transition-colors',
                 isActive
                   ? 'border-white/25 bg-white/10 text-mist-100'
                   : 'border-white/10 text-mist-400 hover:text-mist-200',
@@ -127,13 +127,13 @@ export function RouteAnalyticsPanel({
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-mist-100">{active.routeName}</p>
-            <p className="font-mono text-[0.62rem] text-mist-500">
+            <p className="figure text-3xs text-mist-500">
               last 24h measured · next 4h predicted · {active.peakLabel}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <TrendBadge trend={active.trend} />
-            <span className={cn('font-mono text-[0.7rem]', tone.text)}>
+            <span className={cn('figure text-2xs', tone.text)}>
               {active.currentPct.toFixed(0)}% → {active.predictedPct.toFixed(0)}%
             </span>
           </div>
@@ -207,18 +207,18 @@ export function RouteAnalyticsPanel({
 
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-            <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">Current</p>
-            <p className="font-mono text-sm text-mist-100">{active.currentPct.toFixed(1)}%</p>
+            <p className="eyebrow text-mist-500">Current</p>
+            <p className="figure text-sm text-mist-100">{active.currentPct.toFixed(1)}%</p>
           </div>
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-            <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">Predicted +30</p>
-            <p className={cn('font-mono text-sm', tone.text)}>{active.predictedPct.toFixed(1)}%</p>
+            <p className="eyebrow text-mist-500">Predicted +30</p>
+            <p className={cn('figure text-sm', tone.text)}>{active.predictedPct.toFixed(1)}%</p>
           </div>
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-            <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">Delta</p>
+            <p className="eyebrow text-mist-500">Delta</p>
             <p
               className={cn(
-                'font-mono text-sm',
+                'figure text-sm',
                 active.deltaPct > 0 ? 'text-crowd-critical' : active.deltaPct < 0 ? 'text-crowd-low' : 'text-mist-300',
               )}
             >
@@ -227,8 +227,8 @@ export function RouteAnalyticsPanel({
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-            <p className="text-[0.6rem] tracking-wider text-mist-500 uppercase">24h peak</p>
-            <p className="font-mono text-sm text-mist-100">{active.peakPct.toFixed(1)}%</p>
+            <p className="eyebrow text-mist-500">24h peak</p>
+            <p className="figure text-sm text-mist-100">{active.peakPct.toFixed(1)}%</p>
           </div>
         </div>
       </div>
@@ -237,7 +237,7 @@ export function RouteAnalyticsPanel({
       <div className="overflow-hidden rounded-2xl border border-white/8">
         <div className="flex items-center gap-2 border-b border-white/8 px-3 py-2.5">
           <LineChart className="size-3.5 text-pulse-300" />
-          <p className="text-[0.7rem] font-medium tracking-wide text-mist-300 uppercase">
+          <p className="text-2xs font-medium tracking-wide text-mist-300 uppercase">
             Predicted vs current · all routes
           </p>
         </div>
@@ -256,7 +256,7 @@ export function RouteAnalyticsPanel({
                   isActive ? 'bg-white/[0.05]' : 'hover:bg-white/[0.02]',
                 )}
               >
-                <span className="font-mono text-[0.7rem] text-mist-200">{item.routeNumber}</span>
+                <span className="figure text-2xs text-mist-200">{item.routeNumber}</span>
 
                 <div className="space-y-1">
                   <div className="relative h-2 overflow-hidden rounded-full bg-white/6">
@@ -273,7 +273,7 @@ export function RouteAnalyticsPanel({
                       }}
                     />
                   </div>
-                  <p className="font-mono text-[0.6rem] text-mist-500">
+                  <p className="figure text-3xs text-mist-500">
                     now {formatPercent(item.currentPct / 100, 0)} → +30 {formatPercent(item.predictedPct / 100, 0)}
                   </p>
                 </div>
@@ -281,7 +281,7 @@ export function RouteAnalyticsPanel({
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      'font-mono text-[0.68rem]',
+                      'figure text-2xs',
                       item.deltaPct > 0 ? 'text-crowd-critical' : item.deltaPct < 0 ? 'text-crowd-low' : 'text-mist-400',
                     )}
                   >

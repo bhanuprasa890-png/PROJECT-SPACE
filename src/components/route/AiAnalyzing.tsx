@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrainCircuit, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { RouteCardSkeleton } from '../ui/Skeleton';
 
 /**
  * "AI analyzing routes…" state.
@@ -36,23 +37,36 @@ export function AiAnalyzing({
     return () => window.clearInterval(timer);
   }, []);
 
+  const progress = ((step + 1) / STEPS.length) * 100;
+
   return (
-    <div className={cn('space-y-4', className)}>
-      <div className="glass relative overflow-hidden rounded-2xl px-5 py-5">
-        <span className="pointer-events-none absolute -inset-24 animate-shimmer bg-[radial-gradient(circle_at_20%_20%,rgba(56,245,192,0.16),transparent_60%)]" />
-        <div className="relative flex items-start gap-4">
+    <div className={cn('space-y-4', className)} role="status" aria-live="polite">
+      <div className="glass-strong relative overflow-hidden rounded-2xl px-5 py-5">
+        {/* sweeping scan line — the only motion, and it reads as "working" */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px animate-sweep bg-gradient-to-r from-transparent via-pulse-300/70 to-transparent"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -inset-24 animate-shimmer bg-[radial-gradient(circle_at_18%_20%,rgba(56,245,192,0.14),transparent_62%)]"
+        />
+
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
           <span className="relative grid size-11 shrink-0 place-items-center rounded-xl border border-pulse-400/35 bg-pulse-400/12">
-            <BrainCircuit className="size-5 text-pulse-200" />
-            <span className="absolute -inset-px animate-pulse-ring rounded-xl border border-pulse-400/40" />
+            <BrainCircuit className="size-5 text-pulse-200" aria-hidden />
+            <span className="absolute -inset-px animate-pulse-ring rounded-xl border border-pulse-400/40" aria-hidden />
           </span>
 
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="font-display text-base font-semibold text-mist-50">AI analyzing routes…</p>
-            <p className="font-mono text-[0.7rem] text-mist-400">
-              {from && to ? `${from} → ${to}` : 'Finding the best options for you'}
-            </p>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <p className="font-display text-base font-semibold text-mist-50">AI analyzing routes…</p>
+              <p className="figure text-3xs text-mist-500">
+                {from && to ? `${from} → ${to}` : 'Finding the best options for you'}
+              </p>
+            </div>
 
-            <ul className="mt-3 space-y-1.5">
+            <ul className="grid gap-1.5 sm:grid-cols-2">
               {STEPS.map((label, index) => {
                 const done = index < step;
                 const active = index === step;
@@ -60,58 +74,44 @@ export function AiAnalyzing({
                   <li
                     key={label}
                     className={cn(
-                      'flex items-center gap-2 font-mono text-[0.7rem] transition-colors duration-300',
+                      'flex items-center gap-2 text-2xs transition-colors duration-300',
                       active ? 'text-pulse-100' : done ? 'text-mist-400' : 'text-mist-600',
                     )}
                   >
                     {done ? (
-                      <CheckCircle2 className="size-3.5 text-crowd-low" />
+                      <CheckCircle2 className="size-3.5 shrink-0 text-crowd-low" aria-hidden />
                     ) : (
                       <span
                         className={cn(
-                          'size-1.5 rounded-full',
+                          'size-1.5 shrink-0 rounded-full',
                           active ? 'animate-ping-slow bg-pulse-300' : 'bg-mist-700',
                         )}
+                        aria-hidden
                       />
                     )}
-                    {label}
+                    <span className="truncate">{label}</span>
                   </li>
                 );
               })}
             </ul>
 
-            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/8">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
               <span
                 className="block h-full rounded-full bg-gradient-to-r from-pulse-400/70 to-sky-400/70 transition-[width] duration-500 ease-out"
-                style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+                style={{ width: `${progress}%` }}
               />
             </div>
+            <p className="figure text-3xs text-mist-500">
+              step {Math.min(step + 1, STEPS.length)}/{STEPS.length} · {Math.round(progress)}%
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Placeholder cards keep the layout shift invisible when results land. */}
+      {/* Placeholders keep the layout shift invisible when results land. */}
       <div className="space-y-3">
         {[0, 1, 2].map((index) => (
-          <div
-            key={index}
-            className="glass animate-pulse-soft space-y-3 rounded-2xl p-4"
-            style={{ animationDelay: `${index * 120}ms` }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-14 rounded-lg bg-white/8" />
-                <span className="h-5 w-28 rounded-lg bg-white/6" />
-              </div>
-              <span className="h-7 w-16 rounded-lg bg-white/8" />
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[0, 1, 2, 3].map((cell) => (
-                <span key={cell} className="h-12 rounded-xl bg-white/5" />
-              ))}
-            </div>
-            <span className="block h-2 w-full rounded-full bg-white/6" />
-          </div>
+          <RouteCardSkeleton key={index} className="animate-pulse-soft" />
         ))}
       </div>
     </div>

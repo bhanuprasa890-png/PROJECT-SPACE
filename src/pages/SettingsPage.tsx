@@ -24,7 +24,8 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Field, Input, Segmented, Select, Slider, Toggle } from '../components/ui/Controls';
-import { ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { EmptyState, ErrorState, PanelSkeleton } from '../components/ui/Skeleton';
+import { SectionHeading } from '../components/ui/Section';
 import { cn, crowdToneForRatio, formatPercent, MODE_LABELS } from '../lib/utils';
 
 const DAYS = [
@@ -80,7 +81,14 @@ export function SettingsPage() {
   const dirty = Object.keys(draft).length > 0;
 
   return (
-    <div className="space-y-5 pb-24 lg:pb-6">
+    <div className="space-y-6 pb-28 lg:pb-10">
+      <SectionHeading
+        eyebrow="Rider"
+        title="Preferences"
+        description="Everything on this page is stored in Postgres and read back by the planner on every request — change a value and the next recommendation changes with it."
+        icon={Gauge}
+        actions={dirty ? <Badge tone="moderate" size="xs">Unsaved changes</Badge> : undefined}
+      />
       <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
         {/* Routing preferences */}
         <div className="space-y-5">
@@ -145,7 +153,7 @@ export function SettingsPage() {
                     />
                     <p
                       className={cn(
-                        'mt-3 text-[0.7rem]',
+                        'mt-3 text-2xs',
                         crowdToneForRatio(effective.crowdTolerance ?? 0.8).text,
                       )}
                     >
@@ -181,7 +189,7 @@ export function SettingsPage() {
                   </div>
 
                   <div>
-                    <p className="mb-2 text-[0.68rem] font-medium tracking-wider text-mist-400 uppercase">
+                    <p className="mb-2 text-2xs font-medium tracking-wider text-mist-400 uppercase">
                       Preferred modes
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -192,6 +200,7 @@ export function SettingsPage() {
                             <button
                               key={mode}
                               type="button"
+                              aria-pressed={active}
                               onClick={() =>
                                 patch({
                                   preferredModes: active
@@ -200,10 +209,10 @@ export function SettingsPage() {
                                 })
                               }
                               className={cn(
-                                'rounded-xl border px-3 py-1.5 text-xs font-medium transition',
+                                'rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors duration-200',
                                 active
                                   ? 'border-pulse-400/40 bg-pulse-400/12 text-pulse-300'
-                                  : 'border-white/10 bg-white/[0.02] text-mist-400 hover:text-mist-200',
+                                  : 'border-white/10 bg-white/[0.02] text-mist-400 hover:border-white/20 hover:text-mist-200',
                               )}
                             >
                               {MODE_LABELS[mode] ?? mode}
@@ -238,16 +247,16 @@ export function SettingsPage() {
             <CardBody className="space-y-3">
               {watchlist.isLoading ? (
                 <PanelSkeleton rows={3} />
-              ) : (
+              ) : watchlist.data?.items.length ? (
                 <ul className="space-y-2.5">
                   {watchlist.data?.items.map((item) => (
                     <li
                       key={item.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3 transition-colors hover:border-white/14"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-mist-100">{item.label}</p>
-                        <p className="mt-0.5 text-[0.7rem] text-mist-400">
+                        <p className="mt-0.5 text-2xs text-mist-400">
                           {item.originStopName} → {item.destinationStopName} ·{' '}
                           {item.departTime ?? 'anytime'} · {item.days.join(', ')}
                         </p>
@@ -277,6 +286,13 @@ export function SettingsPage() {
                     </li>
                   ))}
                 </ul>
+              ) : (
+                <EmptyState
+                  compact
+                  title="No saved journeys yet"
+                  description="Add the trip you take most often and TransitPulse will forecast its crowding on the dashboard."
+                  icon={<Bookmark className="size-5" />}
+                />
               )}
 
               <NewJourneyForm
@@ -426,13 +442,13 @@ export function SettingsPage() {
               subtitle="Where settings are stored and read"
               icon={<AlertTriangle className="size-4" />}
             />
-            <CardBody className="space-y-2 text-[0.72rem] text-mist-400">
+            <CardBody className="space-y-2 text-xs text-mist-400">
               <p>
-                Preferences live in <span className="font-mono text-mist-200">rider_profiles</span>;
-                saved journeys in <span className="font-mono text-mist-200">watchlist</span>. Both are
+                Preferences live in <span className="figure text-mist-200">rider_profiles</span>;
+                saved journeys in <span className="figure text-mist-200">watchlist</span>. Both are
                 protected by row level security and reachable through{' '}
-                <span className="font-mono text-mist-200">/api/profile</span> and{' '}
-                <span className="font-mono text-mist-200">/api/watchlist</span>.
+                <span className="figure text-mist-200">/api/profile</span> and{' '}
+                <span className="figure text-mist-200">/api/watchlist</span>.
               </p>
               <p className="text-mist-500">
                 The planner reads these values on every request — change your crowd tolerance and
@@ -450,7 +466,10 @@ export function SettingsPage() {
           dirty ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0',
         )}
       >
-        <div className="glass-strong flex items-center justify-between gap-4 rounded-2xl px-4 py-3">
+        <div
+          role="status"
+          className="glass-strong flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
+        >
           <p className="text-xs text-mist-300">
             {Object.keys(draft).length} preference{Object.keys(draft).length === 1 ? '' : 's'} changed
           </p>
@@ -533,10 +552,14 @@ function NewJourneyForm({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-      <p className="mb-3 text-[0.68rem] font-medium tracking-wider text-mist-400 uppercase">
-        Add a journey
-      </p>
+    <form
+      className="rounded-xl border border-white/10 bg-white/[0.02] p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <p className="eyebrow mb-3 text-mist-400">Add a journey</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Name">
           <Input
@@ -575,7 +598,7 @@ function NewJourneyForm({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[0.65rem] tracking-wider text-mist-500 uppercase">Days</span>
+        <span className="eyebrow text-mist-500">Days</span>
         {DAYS.map((day) => {
           const active = form.days.includes(day.key);
           return (
@@ -591,8 +614,9 @@ function NewJourneyForm({
                     : [...form.days, day.key],
                 })
               }
+              aria-pressed={active}
               className={cn(
-                'size-7 rounded-lg border font-mono text-[0.68rem] transition',
+                'figure size-7 rounded-lg border text-2xs transition-colors',
                 active
                   ? 'border-pulse-400/40 bg-pulse-400/15 text-pulse-300'
                   : 'border-white/10 bg-white/[0.02] text-mist-500',
@@ -613,19 +637,26 @@ function NewJourneyForm({
         />
       </div>
 
-      {error ? <p className="mt-2 text-xs text-crowd-critical">{error}</p> : null}
+      {error ? (
+        <p
+          role="alert"
+          className="mt-3 rounded-lg border border-crowd-critical/30 bg-crowd-critical/[0.08] px-3 py-2 text-xs text-crowd-critical"
+        >
+          {error}
+        </p>
+      ) : null}
 
       <div className="mt-3 flex justify-end">
         <Button
           size="sm"
+          type="submit"
           variant="primary"
           icon={<Plus className="size-3.5" />}
           loading={busy}
-          onClick={() => void submit()}
         >
           Save journey
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

@@ -197,8 +197,9 @@ npm run db:verify
 | **7. Prediction engine** | `/engine` | How does the AI actually decide? The five-stage pipeline, the input catalogue, the crowd-classification table (48% → Low, 72% → Moderate, 91% → High) and a live simulator: pick a route, horizon and weather scenario and watch the predicted occupancy, crowd level, confidence and per-factor contribution recompute from the API. |
 | **8. Data explorer** | `/database` | What does the database actually contain? Live row counts, columns, primary/foreign keys and paginated records for every canonical table, straight from Postgres. |
 
-Every screen is responsive: three-column data layouts on desktop, stacked cards on
-tablet, and a bottom-tab navigation shell on mobile.
+Every screen is responsive: multi-column data layouts on desktop, two-column
+grids on tablet, and a four-tab bottom bar on mobile (**Home · Plan · Alerts ·
+Control**, with **More** opening the full drawer) so nothing is cramped at 360 px.
 
 ---
 
@@ -368,16 +369,41 @@ Errors always come back as `{ "error": { "message", "code", "details?" } }`.
 
 ## 6. Design direction
 
+### 6.1 The system
+
 * **Dark transportation-tech shell** — layered radial gradients, subtle grid, glass
   panels used only where depth communicates hierarchy.
 * **One colour language** — green → yellow → orange → red crowd scale defined once
   in `shared/crowd.ts` and mirrored in `src/index.css` theme tokens.
-* **Data visualisation without a chart library** — forecast chart, sparklines and
-  hourly load profiles are hand-built SVG/CSS.
+* **Data visualisation without a chart library** — forecast chart, heatmap,
+  scan curve, sparklines and hourly load profiles are hand-built SVG/CSS.
 * **Motion with restraint** — one-shot rise-in on cards, a pulsing "live" dot,
-  hover/active feedback; `prefers-reduced-motion` is respected globally.
+  sweep on the analysing/apply states, hover/active feedback; the global
+  `prefers-reduced-motion` block turns all of it off.
 * **Typography** — Space Grotesk for display numerals, Inter for body, JetBrains
   Mono for times, ratios, IDs and table cells.
+
+### 6.2 The refinement pass (round 7)
+
+The whole interface was re-cut without touching behaviour, data flow or schema:
+
+| Layer | What changed |
+| --- | --- |
+| **Tokens** (`src/index.css`) | A 4-step type ramp (`text-3xs` → `text-2xs` → body → display), `--shadow-panel`/`--shadow-lift`, and utilities used everywhere: `eyebrow` (micro uppercase label), `figure` (monospace + tabular numerals, so every number in a column lines up), `hairline`, `safe-bottom`, `scroll-fade-x`, and four glow helpers (`glow-low/moderate/high/pulse`) for status indicators. |
+| **Primitives** (`src/components/ui/`) | Button (6 variants, 4 sizes, loading + `block` CTA, focus ring, active press), Card (+ `CardSection`/`CardFooter`, three surface weights), Badge (+ `StatusDot` with optional live ping), StatTile (count-up, delta chip, sparkline), new `Section.tsx` (`SectionHeading`, `Metric`, `InfoRow`), Controls (shared `Textarea`, keyboard-safe `Select`). |
+| **States** | Skeletons now mirror the layout they replace — `StatGridSkeleton`, `TableSkeleton`, `ChartSkeleton`, `RouteCardSkeleton` — and empty/error states are one component: they say what happened and what to do next, always with a retry where a retry exists. |
+| **Charts** | Forecast chart gained a legend, threshold band labels, vertical ticks, touch scrubbing, a halo cursor and a screen-reader summary; the heatmap gained `<title>` tooltips per corridor, hover read-out, unique gradient ids and an SR list of the busiest corridors. |
+| **Navigation** | Sidebar regrouped into **Rider** / **Operations** with active rails; sticky header carries page context; mobile drawer traps focus by Escape and the tab bar is now four tabs + **More**. |
+| **Accessibility** | Skip link, `:focus-visible` rings on every interactive element, real `<form>` submits (Enter works), `aria-pressed`/`aria-expanded`/`aria-selected` on toggles and pickers, `role="status"`/`role="alert"` on async feedback, labels on every icon-only control, `prefers-reduced-motion` respected. |
+
+### 6.3 Checks
+
+```bash
+npx tsc --noEmit     # types
+npm run build        # production bundle
+npm run smoke        # renders all 8 routes headlessly and fails on console errors
+npm run db:verify    # 59/59 database checks
+```
 
 ---
 

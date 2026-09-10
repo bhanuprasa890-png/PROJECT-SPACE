@@ -36,7 +36,7 @@ export function LegTimeline({
               <div className="flex flex-col items-center pt-1.5">
                 <span
                   className={cn(
-                    'grid size-7 place-items-center rounded-lg border text-[0.62rem] font-bold',
+                    'grid size-7 place-items-center rounded-lg border text-3xs font-bold',
                     isWalk
                       ? 'border-white/10 bg-white/5 text-mist-400'
                       : 'border-transparent text-ink-950',
@@ -67,18 +67,18 @@ export function LegTimeline({
                     ) : (
                       <>
                         {leg.lineName}
-                        <span className="ml-2 font-mono text-[0.7rem] text-mist-500">
+                        <span className="ml-2 figure text-2xs text-mist-500">
                           {leg.lineCode}
                         </span>
                       </>
                     )}
                   </p>
-                  <p className="font-mono text-[0.7rem] text-mist-400">
+                  <p className="figure text-2xs text-mist-400">
                     {departClock} → {arriveClock} · {leg.durationMinutes} min
                   </p>
                 </div>
 
-                <p className="mt-0.5 flex items-center gap-1.5 text-[0.72rem] text-mist-400">
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs text-mist-400">
                   <MapPin className="size-3" />
                   {leg.fromStopName}
                   <span className="text-mist-600">→</span>
@@ -91,15 +91,15 @@ export function LegTimeline({
                 {leg.crowd ? (
                   <div className="mt-2 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-mist-300">
+                      <span className="inline-flex items-center gap-1.5 text-2xs text-mist-300">
                         <Users className="size-3.5" />
                         On board at boarding
                       </span>
                       <span className="flex items-center gap-2">
-                        <span className={cn('font-mono text-xs font-medium', tone?.text)}>
+                        <span className={cn('figure text-xs font-medium', tone?.text)}>
                           {formatPercent(leg.crowd.ratio)}
                         </span>
-                        <span className="font-mono text-[0.68rem] text-mist-500">
+                        <span className="figure text-2xs text-mist-500">
                           {leg.crowd.headcount}/{leg.crowd.capacity}
                         </span>
                       </span>
@@ -111,7 +111,7 @@ export function LegTimeline({
                       className="mt-2"
                     />
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[0.68rem] text-mist-400">
+                      <span className="text-2xs text-mist-400">
                         Peak {formatPercent(leg.crowd.peakRatio)} near {leg.crowd.peakStopName}
                       </span>
                       <ConfidencePill value={leg.crowd.confidence} />
@@ -120,12 +120,12 @@ export function LegTimeline({
                     {expanded && leg.stops.length ? (
                       <ol className="mt-3 space-y-1.5 border-t border-white/6 pt-2">
                         {leg.stops.map((stop) => (
-                          <li key={stop.stopId} className="flex items-center justify-between text-[0.68rem]">
+                          <li key={stop.stopId} className="flex items-center justify-between text-2xs">
                             <span className="flex items-center gap-1.5 text-mist-300">
                               <span className="size-1 rounded-full bg-mist-500" />
                               {stop.name}
                             </span>
-                            <span className="font-mono text-mist-500">+{stop.etaMinutes} min</span>
+                            <span className="figure text-mist-500">+{stop.etaMinutes} min</span>
                           </li>
                         ))}
                       </ol>

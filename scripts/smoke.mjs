@@ -73,6 +73,8 @@ const ROUTES = [
       'Saved journeys',
       'Tambaram',
       'Network pressure',
+      // Round-7 refinement: section hierarchy on the rider dashboard.
+      'Today at a glance',
     ],
   },
   {
@@ -92,6 +94,7 @@ const ROUTES = [
       'Why this recommendation',
       'Crowding scale',
       'Tambaram',
+      'Why this recommendation',
     ],
   },
   {
@@ -106,6 +109,7 @@ const ROUTES = [
       'Crowd forecast',
       'Model breakdown',
       'Tambaram',
+      'Your routing profile',
     ],
   },
   {
@@ -163,12 +167,12 @@ const ROUTES = [
   {
     path: '/alerts',
     name: 'Alerts',
-    expect: ['Service notices', 'Severity mix', 'Signal failure'],
+    expect: ['Service notices', 'Severity mix', 'Signal failure', 'Notice overview'],
   },
   {
     path: '/settings',
     name: 'Settings',
-    expect: ['Routing preferences', 'Saved journeys', 'Ananya Raman'],
+    expect: ['Routing preferences', 'Saved journeys', 'Ananya Raman', 'Preferences'],
   },
   {
     // Data Explorer — proves the canonical Postgres dataset is readable from the

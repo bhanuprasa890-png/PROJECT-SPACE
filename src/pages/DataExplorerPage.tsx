@@ -55,7 +55,7 @@ function ColumnChips({ columns }: { columns: DatasetColumn[] }) {
             column.references ? ` → ${column.references}` : ''
           }`}
           className={cn(
-            'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[0.6rem]',
+            'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 figure text-3xs',
             column.isPrimaryKey
               ? 'border-pulse-400/35 bg-pulse-400/10 text-pulse-200'
               : column.references
@@ -145,7 +145,7 @@ export function DataExplorerPage() {
                 the browser. This is the published route-level dataset, projected from the same
                 network, telemetry and model output the rest of the app runs on.
               </p>
-              <p className="font-mono text-[0.7rem] text-mist-500">
+              <p className="figure text-2xs text-mist-500">
                 {database?.schemaVersion ?? 'schema version unknown'} · latency{' '}
                 {database?.latencyMs ?? '—'} ms · {formatNumber(tables.data?.totals.rows ?? 0)} rows in{' '}
                 {canonicalTables.length} tables + {publishedViews.length} published views
@@ -225,15 +225,15 @@ export function DataExplorerPage() {
                         )}
                       >
                         <span className="min-w-0">
-                          <span className="block truncate font-mono text-xs text-mist-100">
+                          <span className="block truncate figure text-xs text-mist-100">
                             {table.name}
                           </span>
-                          <span className="block truncate text-[0.65rem] text-mist-500">
+                          <span className="block truncate text-3xs text-mist-500">
                             {table.label}
                             {table.requestedAs !== table.name ? ` · requested as ${table.requestedAs}` : ''}
                           </span>
                         </span>
-                        <span className="shrink-0 font-mono text-[0.7rem] text-mist-300">
+                        <span className="shrink-0 figure text-2xs text-mist-300">
                           {table.rowCount}
                         </span>
                       </button>
@@ -242,7 +242,7 @@ export function DataExplorerPage() {
                 </ul>
 
                 <div className="space-y-2">
-                  <p className="text-[0.65rem] tracking-[0.14em] text-mist-500 uppercase">
+                  <p className="text-3xs tracking-[0.14em] text-mist-500 uppercase">
                     Published names
                   </p>
                   <ul className="space-y-1">
@@ -259,14 +259,14 @@ export function DataExplorerPage() {
                           )}
                         >
                           <span className="min-w-0">
-                            <span className="block truncate font-mono text-xs text-mist-100">
+                            <span className="block truncate figure text-xs text-mist-100">
                               {view.requestedAs}
                             </span>
-                            <span className="block truncate text-[0.65rem] text-mist-500">
+                            <span className="block truncate text-3xs text-mist-500">
                               view over {view.name.replace(/^v_/, '')}
                             </span>
                           </span>
-                          <span className="shrink-0 font-mono text-[0.7rem] text-mist-300">
+                          <span className="shrink-0 figure text-2xs text-mist-300">
                             {view.rowCount}
                           </span>
                         </button>
@@ -284,7 +284,7 @@ export function DataExplorerPage() {
           <CardHeader
             title={
               <span className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm">{selected?.name ?? activeTable}</span>
+                <span className="figure text-sm">{selected?.name ?? activeTable}</span>
                 {selected && (
                   <Badge tone="neutral" size="sm">
                     {selected.kind === 'view' ? 'view' : 'table'}
@@ -301,7 +301,7 @@ export function DataExplorerPage() {
             icon={<Rows3 className="size-4 text-pulse-300" />}
             actions={
               rows.data ? (
-                <span className="text-right font-mono text-[0.7rem] text-mist-500">
+                <span className="text-right figure text-2xs text-mist-500">
                   {formatNumber(rows.data.total)} rows
                 </span>
               ) : null
@@ -345,7 +345,7 @@ export function DataExplorerPage() {
                                 )
                               }
                               className={cn(
-                                'inline-flex items-center gap-1 font-mono text-[0.68rem] transition-colors',
+                                'inline-flex items-center gap-1 figure text-2xs transition-colors',
                                 sort?.column === column.name ? 'text-pulse-200' : 'text-mist-400 hover:text-mist-200',
                               )}
                               title={`Sort by ${column.name} (${column.dataType})`}
@@ -371,7 +371,7 @@ export function DataExplorerPage() {
                           {rows.data!.columns.map((column) => (
                             <td
                               key={column.name}
-                              className="max-w-[18rem] truncate py-2 pr-4 font-mono text-[0.72rem] text-mist-200"
+                              className="max-w-[18rem] truncate py-2 pr-4 figure text-xs text-mist-200"
                               title={String(row[column.name] ?? '')}
                             >
                               {formatCell(row[column.name], columnIndex.get(column.name))}
@@ -384,7 +384,7 @@ export function DataExplorerPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-3">
-                  <p className="font-mono text-[0.68rem] text-mist-500">
+                  <p className="figure text-2xs text-mist-500">
                     rows {rows.data.offset + 1}–{Math.min(rows.data.offset + PAGE_SIZE, rows.data.total)} of{' '}
                     {formatNumber(rows.data.total)} · order by {rows.data.orderBy}
                   </p>
@@ -398,7 +398,7 @@ export function DataExplorerPage() {
                     >
                       Prev
                     </Button>
-                    <span className="font-mono text-[0.7rem] text-mist-400">
+                    <span className="figure text-2xs text-mist-400">
                       {page + 1} / {totalPages}
                     </span>
                     <Button

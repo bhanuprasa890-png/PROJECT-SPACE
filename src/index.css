@@ -54,6 +54,17 @@
   --animate-sweep: sweep 1.2s cubic-bezier(0.22, 1, 0.36, 1) 1 both;
   --animate-pop: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   --animate-draw: draw 0.7s ease-out 0.15s both;
+  --animate-slide-in: slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-flash: flash 1.1s ease-out 1 both;
+
+  /* Micro type ramp — the label sizes used across panels. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.05rem;
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.95rem;
+
+  --shadow-panel: 0 26px 60px -42px rgba(3, 5, 12, 0.95);
+  --shadow-lift: 0 20px 50px -34px rgba(56, 245, 192, 0.5);
 }
 
 @keyframes ping-slow {
@@ -156,6 +167,26 @@
   }
 }
 
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes flash {
+  0% {
+    background-color: color-mix(in oklab, var(--color-pulse-400) 26%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 @keyframes shimmer {
   from {
     background-position: -200% 0;
@@ -183,8 +214,16 @@
     background-color: var(--color-ink-950);
     color: var(--color-mist-100);
     font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Figures line up in columns wherever they are compared. */
+  table,
+  [data-figures] {
+    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
@@ -198,6 +237,18 @@
   h4 {
     font-family: var(--font-display);
     letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Keyboard focus stays visible on the dark shell without shouting. */
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--color-pulse-400) 80%, transparent);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
   }
 
   /* Slim scrollbars that suit the dark shell */
@@ -260,6 +311,64 @@
 
 @utility text-glow {
   text-shadow: 0 0 24px color-mix(in oklab, var(--color-pulse-400) 45%, transparent);
+}
+
+/** Hairline rule used between panel sections. */
+@utility hairline {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, white 12%, transparent),
+    transparent
+  );
+}
+
+/** Tabular figures for dashboards — every number in a column lines up. */
+@utility figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/** Micro uppercase label (the operations-console voice). */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xs);
+  line-height: 1.1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/** Soft glow used by live status indicators — restrained, never neon. */
+@utility glow-low {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-crowd-low) 45%, transparent),
+    0 0 14px -3px color-mix(in oklab, var(--color-crowd-low) 60%, transparent);
+}
+
+@utility glow-moderate {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-crowd-moderate) 45%, transparent),
+    0 0 14px -3px color-mix(in oklab, var(--color-crowd-moderate) 55%, transparent);
+}
+
+@utility glow-high {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-crowd-critical) 50%, transparent),
+    0 0 16px -3px color-mix(in oklab, var(--color-crowd-critical) 55%, transparent);
+}
+
+@utility glow-pulse {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-pulse-400) 40%, transparent),
+    0 0 18px -4px color-mix(in oklab, var(--color-pulse-400) 55%, transparent);
+}
+
+/** Fade the edges of scrollable rails so cut-off content reads as intentional. */
+@utility scroll-fade-x {
+  mask-image: linear-gradient(90deg, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+}
+
+@utility safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
 @utility scrollbar-none {

@@ -8,7 +8,7 @@ import {
   Bookmark,
   Clock,
   Gauge,
-  Route,
+  Route as RouteIcon,
   ShieldCheck,
   Sparkles,
   TrainFront,
@@ -17,15 +17,12 @@ import {
 } from 'lucide-react';
 import type { DashboardStat, UpcomingDeparture, WatchlistItem } from '@shared/types';
 import { useDashboard, useDeleteWatchlistItem, useToggleWatchlistItem } from '../hooks/useTransitData';
-import {
-  JourneyPlanner,
-  type PlannerValues,
-  type QuickJourney,
-} from '../components/route/JourneyPlanner';
+import { JourneyPlanner, type PlannerValues, type QuickJourney } from '../components/route/JourneyPlanner';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { ErrorState, PanelSkeleton, Skeleton } from '../components/ui/Skeleton';
+import { EmptyState, ErrorState, PanelSkeleton, StatGridSkeleton } from '../components/ui/Skeleton';
+import { SectionHeading } from '../components/ui/Section';
 import { StatTile } from '../components/ui/StatTile';
 import { CrowdBadge, CrowdLegend, CrowdMeter, ConfidencePill } from '../components/crowd/CrowdIndicators';
 import { CrowdHotspotList, LivePill } from '../components/crowd/CrowdHotspotList';
@@ -46,6 +43,13 @@ const STAT_TONES: Record<DashboardStat['tone'], 'positive' | 'negative' | 'neutr
   warning: 'neutral',
   neutral: 'neutral',
 };
+
+/** The three product verbs — kept as one quiet strip, not three loud cards. */
+const STAGES = [
+  { icon: Activity, title: 'Predict', text: 'Forecast occupancy per leg' },
+  { icon: ShieldCheck, title: 'Avoid', text: 'Skip the crowded services' },
+  { icon: RouteIcon, title: 'Optimize', text: 'Score time against crowding' },
+];
 
 export function CommuterDashboard() {
   const navigate = useNavigate();
@@ -129,62 +133,66 @@ export function CommuterDashboard() {
   const alertsStat = data?.stats.find((stat) => stat.key === 'alerts');
 
   return (
-    <div className="space-y-5">
-      {/* ------------------------------------------------------------- hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-white/8 bg-gradient-to-br from-ink-900/85 via-ink-950/70 to-ink-900/30 p-5 sm:p-7">
-        <span className="pointer-events-none absolute -top-28 -right-24 size-72 rounded-full bg-pulse-400/10 blur-3xl" />
-        <span className="pointer-events-none absolute -bottom-32 -left-20 size-72 rounded-full bg-sky-400/10 blur-3xl" />
+    <div className="space-y-6">
+      {/* ------------------------------------------------------------------ hero */}
+      <section className="glass-strong relative overflow-hidden rounded-3xl p-5 sm:p-7 lg:p-8">
+        <span
+          className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-pulse-400/8 blur-3xl"
+          aria-hidden
+        />
+        <span
+          className="pointer-events-none absolute -bottom-40 -left-24 size-80 rounded-full bg-sky-400/8 blur-3xl"
+          aria-hidden
+        />
 
-        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:items-center">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 rounded-full border border-pulse-400/30 bg-pulse-400/10 px-3 py-1 text-[0.65rem] font-medium tracking-wide text-pulse-200 uppercase">
-              <Sparkles className="size-3" />
-              Live crowd forecasting · {data?.model ? `model ${data.model.version}` : 'TransitPulse AI'}
+        <div className="relative grid gap-7 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] xl:items-center">
+          <div className="space-y-5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-pulse-400/25 bg-pulse-400/8 px-3 py-1 text-2xs font-medium tracking-wider text-pulse-200 uppercase">
+              <Sparkles className="size-3" aria-hidden />
+              Live crowd forecasting
+              <span className="text-pulse-300/60">·</span>
+              <span className="normal-case">{data?.model ? `model ${data.model.version}` : 'TransitPulse AI'}</span>
             </span>
 
-            <h1 className="font-display text-3xl leading-[1.1] font-semibold tracking-tight text-mist-50 sm:text-4xl">
-              Know the crowd <span className="text-pulse-300">before you board.</span>
-            </h1>
-
-            <p className="max-w-xl text-sm leading-relaxed text-mist-300">
-              Tell TransitPulse where you are going. It predicts how full every option will be at
-              your departure time, then recommends the route that keeps you comfortable — with the
-              numbers to prove it.
-            </p>
+            <div className="space-y-3">
+              <h1 className="font-display text-[2rem] leading-[1.08] font-semibold tracking-tight text-mist-50 sm:text-4xl lg:text-[2.75rem]">
+                Know the crowd <span className="text-pulse-300">before you board.</span>
+              </h1>
+              <p className="max-w-xl text-sm leading-relaxed text-mist-300">
+                Tell TransitPulse where you are going. It predicts how full every option will be at
+                your departure time, then recommends the route that keeps you comfortable — with the
+                numbers to prove it.
+              </p>
+            </div>
 
             <ol className="grid gap-2 sm:grid-cols-3">
-              {[
-                { icon: Activity, title: 'Predict', text: 'Forecast occupancy per leg' },
-                { icon: ShieldCheck, title: 'Avoid', text: 'Skip the crowded services' },
-                { icon: Route, title: 'Optimize', text: 'Score time vs crowding' },
-              ].map(({ icon: Icon, title, text }) => (
+              {STAGES.map(({ icon: Icon, title, text }, index) => (
                 <li
                   key={title}
-                  className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                  className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 transition-colors hover:border-white/14"
                 >
-                  <span className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-mist-100">
-                    <Icon className="size-3.5 text-pulse-300" />
+                  <span className="flex items-center gap-1.5 text-2xs font-semibold text-mist-100">
+                    <Icon className="size-3.5 text-pulse-300" aria-hidden />
                     {title}
+                    <span className="figure ml-auto text-3xs text-mist-600">0{index + 1}</span>
                   </span>
-                  <span className="mt-0.5 block text-[0.65rem] leading-relaxed text-mist-400">
-                    {text}
-                  </span>
+                  <span className="mt-1 block text-3xs leading-relaxed text-mist-400">{text}</span>
                 </li>
               ))}
             </ol>
 
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem]">
+            <div className="flex flex-wrap items-center gap-2 text-2xs">
               <LivePill label="Telemetry" />
               {busiest ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-2.5 py-1 text-mist-300">
-                  <Gauge className="size-3" />
-                  Busiest right now <span className="font-mono text-mist-100">{busiest.value}</span>
+                  <Gauge className="size-3" aria-hidden />
+                  Busiest right now <span className="figure text-mist-100">{busiest.value}</span>
                 </span>
               ) : null}
               {alertsStat ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-2.5 py-1 text-mist-300">
-                  <BellRing className="size-3" />
-                  <span className="font-mono text-mist-100">{alertsStat.value}</span> active alerts
+                  <BellRing className="size-3" aria-hidden />
+                  <span className="figure text-mist-100">{alertsStat.value}</span> active alerts
                 </span>
               ) : null}
             </div>
@@ -203,7 +211,38 @@ export function CommuterDashboard() {
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
+      {/* ------------------------------------------------- network snapshot (KPI) */}
+      <section aria-labelledby="network-snapshot" className="space-y-3">
+        <SectionHeading
+          id="network-snapshot"
+          eyebrow="Network"
+          title="Today at a glance"
+          description="Every tile is an aggregation the API runs over live telemetry in Postgres."
+          icon={Gauge}
+          actions={<LivePill />}
+        />
+        {isLoading ? (
+          <StatGridSkeleton count={5} className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {data?.stats.map((stat, index) => (
+              <StatTile
+                key={stat.key}
+                label={stat.label}
+                value={stat.value}
+                hint={stat.hint}
+                icon={STAT_ICONS[stat.icon] ?? Activity}
+                tone={STAT_TONES[stat.tone]}
+                accent={index === 0 ? 'pulse' : 'none'}
+                animated={false}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* --------------------------------------- next journey + network pressure */}
+      <div className="grid gap-5 xl:grid-cols-[1.12fr_1fr]">
         <Card accent="pulse" className="flex flex-col">
           <CardHeader
             title={nextJourney ? nextJourney.label : 'No saved journey yet'}
@@ -216,50 +255,54 @@ export function CommuterDashboard() {
             actions={<LivePill label="Forecast" />}
           />
 
-          <CardBody className="flex-1">
+          <CardBody className="flex flex-1 flex-col">
             {isLoading ? (
               <PanelSkeleton rows={3} />
-            ) : bestOption ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[0.68rem] tracking-wider text-mist-400 uppercase">
-                      Board at
-                    </p>
-                    <p className="font-display text-3xl font-semibold text-mist-100">
-                      {formatClock(bestOption.departAt)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-mist-400">
-                      Arrives {formatClock(bestOption.arriveAt)} ·{' '}
-                      {formatDuration(bestOption.totalMinutes)}
-                    </p>
+            ) : bestOption && nextJourney ? (
+              <div className="flex flex-1 flex-col gap-4">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                  <div className="flex items-end gap-4">
+                    <div>
+                      <p className="eyebrow text-mist-500">Board at</p>
+                      <p className="mt-1 font-display text-[2.25rem] leading-none font-semibold text-mist-100">
+                        {formatClock(bestOption.departAt)}
+                      </p>
+                    </div>
+                    <div className="pb-1 text-2xs leading-relaxed text-mist-400">
+                      <p className="figure">Arrives {formatClock(bestOption.arriveAt)}</p>
+                      <p className="figure">{formatDuration(bestOption.totalMinutes)} · {bestOption.transfers === 0 ? 'direct' : `${bestOption.transfers} change`}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
+                  <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                    <Badge tone="pulse" size="xs" icon={<Sparkles className="size-3" />} dot live>
+                      AI recommended
+                    </Badge>
                     <CrowdBadge
                       level={bestOption.crowdRiskLevel}
                       label={`Peak ${formatPercent(bestOption.crowdRisk)}`}
+                      size="xs"
                     />
-                    <p className="mt-1.5 text-[0.68rem] text-mist-500">
-                      Recommendation score {bestOption.score.toFixed(0)}
-                    </p>
+                    <span className="figure text-3xs text-mist-500">
+                      score {bestOption.score.toFixed(0)}
+                    </span>
                   </div>
                 </div>
 
-                <p className="rounded-xl border border-pulse-400/20 bg-pulse-400/8 px-3.5 py-3 text-sm leading-relaxed text-mist-200">
+                <p className="rounded-xl border border-pulse-400/18 bg-pulse-400/[0.07] px-3.5 py-3 text-[0.82rem] leading-relaxed text-mist-200">
                   {bestOption.headline}
                 </p>
 
                 <LegTimeline legs={bestOption.legs} />
 
-                <div className="flex flex-wrap gap-2">
+                <div className="mt-auto flex flex-wrap gap-2 pt-1">
                   <Button
                     variant="primary"
                     size="sm"
-                    iconRight={<ArrowRight className="size-3.5" />}
+                    iconRight={<ArrowRight className="size-3.5" aria-hidden />}
                     onClick={() =>
                       navigate(
-                        `/routes/details?origin=${nextJourney?.origin.id}&destination=${
-                          nextJourney?.destination.id
+                        `/routes/details?origin=${nextJourney.origin.id}&destination=${
+                          nextJourney.destination.id
                         }&option=${bestOption.id}&lineId=${bestOption.legs[0]?.lineId ?? ''}&stopId=${
                           bestOption.legs[0]?.fromStopId ?? ''
                         }`,
@@ -268,81 +311,61 @@ export function CommuterDashboard() {
                   >
                     Open boarding plan
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate('/routes')}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => navigate('/routes')}>
                     Compare all options
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-mist-300">
-                  No journey to recommend yet. Save a regular trip and TransitPulse will forecast
-                  crowding for it automatically.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  icon={<ArrowRight className="size-3.5" />}
-                  onClick={() => navigate('/settings')}
-                >
-                  Add a saved journey
-                </Button>
-              </div>
+              <EmptyState
+                compact
+                title="No journey to recommend yet"
+                description="Save a regular trip and TransitPulse will forecast crowding for it automatically."
+                icon={<Bookmark className="size-5" />}
+                action={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<ArrowRight className="size-3.5" aria-hidden />}
+                    onClick={() => navigate('/settings')}
+                  >
+                    Add a saved journey
+                  </Button>
+                }
+              />
             )}
           </CardBody>
         </Card>
-      </div>
 
-      {/* KPI strip — values come straight from the database aggregation */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {isLoading
-          ? Array.from({ length: 5 }).map((_, index) => (
-              <Card key={index} className="p-4">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="mt-3 h-7 w-16" />
-                <Skeleton className="mt-2 h-3 w-32" />
-              </Card>
-            ))
-          : data?.stats.map((stat, index) => (
-              <StatTile
-                key={stat.key}
-                label={stat.label}
-                value={stat.value}
-                hint={stat.hint}
-                icon={STAT_ICONS[stat.icon] ?? Activity}
-                tone={STAT_TONES[stat.tone]}
-                accent={index === 0 ? 'pulse' : 'none'}
-                animated={false}
-              />
-            ))}
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-        {/* Live network pressure */}
-        <Card className="xl:col-span-1">
+        <Card className="flex flex-col">
           <CardHeader
             title="Network pressure right now"
             subtitle="Highest measured load per line, from live telemetry"
             icon={<Gauge className="size-4" />}
             actions={<LivePill />}
           />
-          <CardBody>
+          <CardBody className="flex-1">
             {isLoading ? (
-              <PanelSkeleton rows={3} />
-            ) : (
+              <PanelSkeleton rows={4} />
+            ) : data?.crowdingNow.length ? (
               <>
-                <CrowdHotspotList hotspots={data?.crowdingNow ?? []} />
+                <CrowdHotspotList hotspots={data.crowdingNow} />
                 <CrowdLegend className="mt-4 border-t border-white/6 pt-3" />
               </>
+            ) : (
+              <EmptyState
+                compact
+                title="No live readings yet"
+                description="The network has no measured load in the current service window."
+                icon={<Gauge className="size-5" />}
+              />
             )}
           </CardBody>
         </Card>
+      </div>
 
-        {/* Departure boards */}
+      {/* --------------------------------------------- boards + alerts (2 columns) */}
+      <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader
             title="Departure boards"
@@ -351,30 +374,37 @@ export function CommuterDashboard() {
           />
           <CardBody className="space-y-5">
             {isLoading ? (
-              <PanelSkeleton rows={3} />
+              <PanelSkeleton rows={4} />
             ) : data?.stationBoards.length ? (
               data.stationBoards.map((board) => (
                 <div key={board.stop.id}>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-medium tracking-wide text-mist-200 uppercase">
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <p className="text-xs font-semibold tracking-wide text-mist-200 uppercase">
                       {board.stop.name}
                     </p>
-                    <span className="font-mono text-[0.65rem] text-mist-500">{board.stop.code}</span>
+                    <span className="figure text-3xs text-mist-500">{board.stop.code}</span>
                   </div>
                   <ul className="space-y-2">
                     {board.departures.slice(0, 4).map((departure) => (
-                      <DepartureRow key={`${departure.lineId}-${departure.departureAt}`} departure={departure} />
+                      <DepartureRow
+                        key={`${departure.lineId}-${departure.departureAt}`}
+                        departure={departure}
+                      />
                     ))}
                   </ul>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-mist-500">No upcoming departures found.</p>
+              <EmptyState
+                compact
+                title="No upcoming departures"
+                description="Nothing is scheduled to leave your saved stops in the next window."
+                icon={<Clock className="size-5" />}
+              />
             )}
           </CardBody>
         </Card>
 
-        {/* Alerts */}
         <Card>
           <CardHeader
             title="Service alerts"
@@ -393,34 +423,32 @@ export function CommuterDashboard() {
               data.activeAlerts.map((alert) => {
                 const tone = severityTone(alert.severity);
                 return (
-                  <div
-                    key={alert.id}
-                    className={cn('rounded-xl border px-3.5 py-3', tone.border, tone.bg)}
-                  >
+                  <div key={alert.id} className={cn('rounded-xl border px-3.5 py-3', tone.border, tone.bg)}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className={cn('text-[0.7rem] font-semibold', tone.text)}>
+                      <span className={cn('text-2xs font-semibold tracking-wide uppercase', tone.text)}>
                         {tone.label}
                         {alert.lineCode ? ` · Line ${alert.lineCode}` : ''}
                       </span>
-                      <span className="font-mono text-[0.65rem] text-mist-500">
-                        {formatClock(alert.startsAt)}
-                      </span>
+                      <span className="figure text-3xs text-mist-500">{formatClock(alert.startsAt)}</span>
                     </div>
-                    <p className="mt-1 text-xs font-medium text-mist-100">{alert.title}</p>
-                    <p className="mt-1 line-clamp-2 text-[0.68rem] leading-relaxed text-mist-400">
-                      {alert.body}
-                    </p>
+                    <p className="mt-1.5 text-xs font-medium text-mist-100">{alert.title}</p>
+                    <p className="mt-1 line-clamp-2 text-2xs leading-relaxed text-mist-400">{alert.body}</p>
                   </div>
                 );
               })
             ) : (
-              <p className="text-xs text-mist-500">No active alerts — network running normally.</p>
+              <EmptyState
+                compact
+                title="No active alerts"
+                description="The network is running normally — nothing to report for your stops."
+                icon={<BellRing className="size-5" />}
+              />
             )}
           </CardBody>
         </Card>
       </div>
 
-      {/* Saved journeys */}
+      {/* ---------------------------------------------------------- saved journeys */}
       <Card>
         <CardHeader
           title="Saved journeys"
@@ -455,16 +483,25 @@ export function CommuterDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-mist-500">
-              No saved journeys yet — add one from Settings to unlock automatic predictions.
-            </p>
+            <EmptyState
+              title="No saved journeys yet"
+              description="Add a regular trip from Settings and TransitPulse will keep forecasting its crowding."
+              icon={<Bookmark className="size-5" />}
+              action={
+                <Button size="sm" variant="outline" onClick={() => navigate('/settings')}>
+                  Add a saved journey
+                </Button>
+              }
+            />
           )}
         </CardBody>
       </Card>
 
-      <p className="pb-2 text-center text-[0.68rem] text-mist-600">
+      <p className="pb-2 text-center text-3xs leading-relaxed text-mist-600">
         Every figure on this page is served by the TransitPulse API from Postgres
-        {data?.model ? ` · model ${data.model.version} (${Math.round(data.model.accuracy * 100)}% backtest accuracy)` : ''}
+        {data?.model
+          ? ` · model ${data.model.version} (${Math.round(data.model.accuracy * 100)}% backtest accuracy on simulated data)`
+          : ''}
       </p>
     </div>
   );
@@ -472,9 +509,9 @@ export function CommuterDashboard() {
 
 function DepartureRow({ departure }: { departure: UpcomingDeparture }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
+    <li className="group flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/14 hover:bg-white/[0.04]">
       <span
-        className="grid size-8 shrink-0 place-items-center rounded-lg text-[0.68rem] font-bold text-ink-950"
+        className="grid size-9 shrink-0 place-items-center rounded-lg text-2xs font-bold text-ink-950"
         style={{ backgroundColor: departure.lineColor }}
       >
         {departure.lineCode.slice(0, 3)}
@@ -483,13 +520,11 @@ function DepartureRow({ departure }: { departure: UpcomingDeparture }) {
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-xs text-mist-200">
             {departure.lineName}
-            <span className="ml-1.5 font-mono text-[0.65rem] text-mist-500">
+            <span className="ml-1.5 text-3xs text-mist-500">
               {departure.direction === 0 ? 'outbound' : 'inbound'}
             </span>
           </p>
-          <span className="font-mono text-xs text-mist-100">
-            {departure.minutesAway}′
-          </span>
+          <span className="figure shrink-0 text-xs text-mist-100">{departure.minutesAway}′</span>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <CrowdMeter
@@ -498,9 +533,7 @@ function DepartureRow({ departure }: { departure: UpcomingDeparture }) {
             height="sm"
             className="flex-1"
           />
-          <span className={cn('font-mono text-[0.65rem]')}>
-            {formatPercent(departure.prediction.ratio)}
-          </span>
+          <span className="figure text-3xs text-mist-400">{formatPercent(departure.prediction.ratio)}</span>
         </div>
       </div>
       {departure.isRecommended ? (
@@ -527,11 +560,11 @@ function WatchlistCard({
 }) {
   const prediction = item.prediction;
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+    <div className="flex flex-col rounded-xl border border-white/8 bg-white/[0.02] p-3.5 transition-colors hover:border-white/14">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-mist-100">{item.label}</p>
-          <p className="mt-0.5 truncate text-[0.7rem] text-mist-400">
+          <p className="mt-0.5 truncate text-2xs text-mist-400">
             {item.originStopName} → {item.destinationStopName}
           </p>
         </div>
@@ -540,49 +573,41 @@ function WatchlistCard({
           onClick={onDelete}
           disabled={busy}
           aria-label={`Delete ${item.label}`}
-          className="rounded-lg p-1.5 text-mist-500 transition hover:bg-crowd-critical/15 hover:text-crowd-critical disabled:opacity-50"
+          className="rounded-lg p-1.5 text-mist-500 transition-colors hover:bg-crowd-critical/15 hover:text-crowd-critical focus-visible:bg-crowd-critical/15 disabled:opacity-50"
         >
-          <Trash2 className="size-3.5" />
+          <Trash2 className="size-3.5" aria-hidden />
         </button>
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2 text-[0.68rem] text-mist-500">
-        <Clock className="size-3" />
+      <div className="mt-2.5 flex items-center gap-2 text-2xs text-mist-500">
+        <Clock className="size-3" aria-hidden />
         {item.departTime ?? 'Anytime'}
         <span className="text-mist-600">·</span>
-        {item.days.map((day) => day.slice(0, 1).toUpperCase()).join('')}
+        <span className="figure">{item.days.map((day) => day.slice(0, 1).toUpperCase()).join('')}</span>
       </div>
 
       {prediction ? (
         <div className="mt-3 rounded-lg border border-white/8 bg-ink-900/50 px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-[0.68rem] text-mist-300">
-              <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: prediction.lineColor }}
-              />
-              {prediction.lineCode}
+            <span className="flex items-center gap-1.5 text-2xs text-mist-300">
+              <span className="size-2 rounded-full" style={{ backgroundColor: prediction.lineColor }} aria-hidden />
+              <span className="figure">{prediction.lineCode}</span>
             </span>
             <CrowdBadge level={prediction.level} ratio={prediction.ratio} size="xs" />
           </div>
-          <CrowdMeter
-            ratio={prediction.ratio}
-            level={prediction.level}
-            height="sm"
-            className="mt-2"
-          />
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[0.65rem] text-mist-500">{prediction.status}</span>
+          <CrowdMeter ratio={prediction.ratio} level={prediction.level} height="sm" className="mt-2" />
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-3xs text-mist-500">{prediction.status}</span>
             <ConfidencePill value={prediction.confidence} />
           </div>
         </div>
       ) : (
-        <p className="mt-3 text-[0.68rem] text-mist-500">
+        <p className="mt-3 rounded-lg border border-dashed border-white/10 px-3 py-2.5 text-3xs text-mist-500">
           No service found for that departure time today.
         </p>
       )}
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="mt-auto flex items-center justify-between gap-2 pt-3">
         <Badge tone={item.avoidCrowded ? 'low' : 'neutral'} size="xs" icon={<Users className="size-3" />}>
           {item.avoidCrowded ? 'Crowd-aware' : 'Time only'}
         </Badge>

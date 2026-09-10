@@ -21,7 +21,7 @@ export function CrowdBadge({
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap',
-        size === 'xs' ? 'px-2 py-0.5 text-[0.65rem]' : 'px-2.5 py-1 text-[0.7rem]',
+        size === 'xs' ? 'px-2 py-0.5 text-3xs' : 'px-2.5 py-1 text-2xs',
         tone.border,
         tone.bg,
         tone.text,
@@ -102,7 +102,7 @@ export function CapacityReadout({
   className?: string;
 }) {
   return (
-    <span className={cn('font-mono text-[0.7rem] text-mist-400', className)}>
+    <span className={cn('figure text-2xs text-mist-400', className)}>
       {headcount}
       <span className="text-mist-600">/{capacity}</span> riders
     </span>
@@ -114,7 +114,7 @@ export function ConfidencePill({ value, className }: { value: number; className?
   const pct = Math.round(value * 100);
   const tone = pct >= 85 ? 'text-crowd-low' : pct >= 70 ? 'text-crowd-moderate' : 'text-mist-400';
   return (
-    <span className={cn('inline-flex items-center gap-1.5 text-[0.7rem]', tone, className)}>
+    <span className={cn('inline-flex items-center gap-1.5 text-2xs', tone, className)}>
       <span className="relative flex size-2">
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-current opacity-40" />
         <span className="relative inline-flex size-2 rounded-full bg-current" />
@@ -137,10 +137,10 @@ export function CrowdLegend({ className }: { className?: string }) {
       {levels.map(({ level, range }) => {
         const tone = crowdTone(level);
         return (
-          <span key={level} className="inline-flex items-center gap-2 text-[0.68rem] text-mist-400">
+          <span key={level} className="inline-flex items-center gap-2 text-2xs text-mist-400">
             <span className={cn('size-2 rounded-full', tone.dot)} />
             <span className={cn('font-medium', tone.text)}>{tone.label}</span>
-            <span className="font-mono text-mist-500">{range}</span>
+            <span className="figure text-mist-500">{range}</span>
           </span>
         );
       })}

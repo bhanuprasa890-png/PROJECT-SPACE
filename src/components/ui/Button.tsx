@@ -2,23 +2,27 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'subtle' | 'danger';
 type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-gradient-to-r from-pulse-500 to-pulse-400 text-ink-950 font-semibold shadow-[0_10px_30px_-12px_rgba(20,217,168,0.7)] hover:from-pulse-400 hover:to-pulse-300',
-  secondary: 'bg-white/8 text-mist-100 hover:bg-white/14 border border-white/10',
-  ghost: 'text-mist-300 hover:text-mist-100 hover:bg-white/6',
-  outline: 'border border-white/15 text-mist-200 hover:border-pulse-400/50 hover:text-mist-100',
-  danger: 'bg-crowd-critical/15 text-crowd-critical border border-crowd-critical/40 hover:bg-crowd-critical/25',
+    'bg-gradient-to-r from-pulse-500 to-pulse-400 text-ink-950 font-semibold shadow-[0_14px_34px_-18px_rgba(20,217,168,0.85)] hover:from-pulse-400 hover:to-pulse-300 hover:shadow-[0_18px_40px_-18px_rgba(20,217,168,0.95)]',
+  secondary:
+    'border border-white/10 bg-white/8 text-mist-100 hover:border-white/18 hover:bg-white/14',
+  ghost: 'border border-transparent text-mist-300 hover:bg-white/6 hover:text-mist-100',
+  outline:
+    'border border-white/15 text-mist-200 hover:border-pulse-400/50 hover:bg-white/4 hover:text-mist-100',
+  subtle: 'border border-transparent bg-white/4 text-mist-200 hover:bg-white/8 hover:text-mist-100',
+  danger:
+    'border border-crowd-critical/40 bg-crowd-critical/12 text-crowd-critical hover:bg-crowd-critical/22',
 };
 
 const SIZES: Record<Size, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-6 text-[0.95rem] gap-2.5',
-  icon: 'h-9 w-9 justify-center',
+  sm: 'h-8 gap-1.5 rounded-lg px-3 text-xs',
+  md: 'h-10 gap-2 rounded-xl px-4 text-sm',
+  lg: 'h-12 gap-2.5 rounded-xl px-6 text-[0.95rem]',
+  icon: 'size-9 rounded-lg',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -27,6 +31,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   icon?: ReactNode;
   iconRight?: ReactNode;
+  /** Stretch to the full width of its container (mobile CTAs). */
+  block?: boolean;
 }
 
 export function Button({
@@ -35,20 +41,27 @@ export function Button({
   loading = false,
   icon,
   iconRight,
+  block = false,
   className,
   children,
   disabled,
+  type = 'button',
   ...rest
 }: ButtonProps) {
   return (
     <button
       {...rest}
+      type={type}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
-        'inline-flex items-center justify-center rounded-xl font-medium tracking-tight transition-all duration-200',
-        'disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.985]',
+        'relative inline-flex select-none items-center justify-center font-medium tracking-tight whitespace-nowrap',
+        'transition-[background-color,background-image,border-color,color,box-shadow,transform] duration-200',
+        'outline-none focus-visible:ring-2 focus-visible:ring-pulse-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
+        'disabled:cursor-not-allowed disabled:opacity-45 active:scale-[0.985] disabled:active:scale-100',
         VARIANTS[variant],
         SIZES[size],
+        block && 'w-full',
         className,
       )}
     >
@@ -56,5 +69,26 @@ export function Button({
       {children}
       {iconRight}
     </button>
+  );
+}
+
+/** Small icon-only button with a tooltip label — used in dense panel headers. */
+export function IconButton({
+  label,
+  className,
+  children,
+  ...rest
+}: ButtonProps & { label: string }) {
+  return (
+    <Button
+      {...rest}
+      size="icon"
+      variant={rest.variant ?? 'ghost'}
+      aria-label={label}
+      title={label}
+      className={className}
+    >
+      {children}
+    </Button>
   );
 }

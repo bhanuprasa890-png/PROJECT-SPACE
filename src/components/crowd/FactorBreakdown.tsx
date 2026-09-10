@@ -30,7 +30,7 @@ export function FactorBreakdown({
               <span className="text-xs font-medium text-mist-200">{factor.label}</span>
               <span
                 className={cn(
-                  'font-mono text-[0.7rem]',
+                  'figure text-2xs',
                   positive ? 'text-crowd-moderate' : 'text-crowd-low',
                 )}
               >
@@ -52,14 +52,14 @@ export function FactorBreakdown({
                 <span className="absolute inset-y-0 left-1/2 w-px bg-white/15" />
               </div>
             </div>
-            <p className="text-[0.68rem] leading-relaxed text-mist-500">{factor.detail}</p>
+            <p className="text-2xs leading-relaxed text-mist-500">{factor.detail}</p>
           </li>
         );
       })}
       {baselineRatio !== undefined ? (
-        <li className="rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2 text-[0.68rem] text-mist-400">
+        <li className="rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2 text-2xs text-mist-400">
           Learned baseline for this hour:{' '}
-          <span className="font-mono text-mist-200">{Math.round(baselineRatio * 100)}%</span> occupancy
+          <span className="figure text-mist-200">{Math.round(baselineRatio * 100)}%</span> occupancy
           before live adjustments.
         </li>
       ) : null}
