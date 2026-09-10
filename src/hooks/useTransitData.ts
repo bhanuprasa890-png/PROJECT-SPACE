@@ -239,6 +239,16 @@ export function useAlerts(filters: { status?: AlertStatus | 'all'; severity?: st
   });
 }
 
+/** Operator Command Center — refreshed on an interval so the console stays live. */
+export function useCommandCenter(refetchIntervalMs = 60_000) {
+  return useQuery({
+    queryKey: queryKeys.commandCenter,
+    queryFn: () => api.commandCenter(),
+    staleTime: 15_000,
+    refetchInterval: refetchIntervalMs,
+  });
+}
+
 export function useOperatorOverview(windowHours = 24) {
   return useQuery({
     queryKey: queryKeys.operator(windowHours),

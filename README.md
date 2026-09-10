@@ -185,7 +185,7 @@ npm run db:verify
 | **1. Commuter dashboard** | `/` | *Know the crowd before you board.* — From / To / Departure time and one **Find Best Route** button, above the next-journey recommendation, live network pressure, departure boards with predicted load per service, saved journeys and active alerts. |
 | **2. Route results** | `/routes` | Which option should I take? *AI analyzing routes…* while the planner runs, then one card per option: route number and name, travel time, waiting time, predicted occupancy, crowd level, AI confidence and a comfort indicator — clearly badged **AI Recommended**, **Fastest Route** and **Least Crowded Route**, with **Why this route?** expanding to `travel + waiting + crowd penalty = route score`. |
 | **3. Route details** | `/routes/details` | Is this really the best choice? Occupancy prediction with AI confidence and crowd trend, leg-by-leg boarding plan, estimated arrival per leg, forecast chart, model factor breakdown, score arithmetic (`/routes/details` keeps the trade-off tab) and alternative routes with what each one avoids. |
-| **4. Operator dashboard** | `/operator` | How is the network performing? Fleet state, 24-hour load profiles, crowding hotspots, demand signals from real searches, service KPIs, system health. |
+| **4. Operator Command Center** | `/operator` | What needs attention in the next hour? A live status bar (clock, network state, model), the **network overview** (active routes, active vehicles, high-crowd routes, average network occupancy), **live route status** for every route (occupancy, crowd band, forecast, vehicles, operating status), a schematic **crowd heatmap** with live / +30 min / 24 h-peak views, the **AI alert feed** (route, predicted occupancy, ETA, severity, recommended action), **AI recommendations** (deploy a vehicle, redirect passengers, tighten headway, fleet readiness — each with evidence, expected impact and a one-click *Dispatch* that publishes the advisory into `alerts`), and **route analytics** (measured → predicted trend per route, current vs forecast). |
 | **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
 | **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
 | **7. Prediction engine** | `/engine` | How does the AI actually decide? The five-stage pipeline, the input catalogue, the crowd-classification table (48% → Low, 72% → Moderate, 91% → High) and a live simulator: pick a route, horizon and weather scenario and watch the predicted occupancy, crowd level, confidence and per-factor contribution recompute from the API. |
@@ -278,8 +278,13 @@ tell one story.
    crowd penalty (from 61% peak occupancy)"*.
 
 Each run is persisted to `route_searches` / `route_search_options`, which is why
-the operator dashboard's demand panel and "crowding avoided by routing" KPI are
-real aggregates rather than illustrative numbers.
+the operator command centre's demand panel and "crowding avoided by routing" KPI
+are real aggregates rather than illustrative numbers.
+
+If a rider plans a journey after the last departure of the day, the planner rolls
+the search forward to the **next service window** (read from `service_patterns`
+in the agency timezone) and returns those itineraries with a `serviceNote`,
+instead of dead-ending on an empty screen.
 
 ---
 
@@ -299,7 +304,8 @@ real aggregates rather than illustrative numbers.
 | `GET` | `/api/prediction/engine` | Pipeline stages, input catalogue, crowd classes, engine descriptor, simulated weather |
 | `GET` | `/api/prediction/weather` | Simulated weather slots and the demand multiplier behind each condition |
 | `GET\|POST\|PATCH\|DELETE` | `/api/alerts` (`/:id`) | List, publish, resolve/reopen, retract |
-| `GET` | `/api/operator/overview\|fleet\|line-load\|demand\|config` | Control-room analytics |
+| `GET` | `/api/operator/command-center` | The whole command centre: network KPIs, live route status, heatmap geometry + load, AI alerts, AI recommendations and route analytics |
+| `GET` | `/api/operator/overview\|fleet\|line-load\|demand\|config` | Supporting control-room analytics |
 | `GET\|PATCH` | `/api/profile` | Rider preferences |
 | `GET\|POST` | `/api/watchlist` (`/:id`, `/:id/toggle`) | Saved journeys |
 | `GET` | `/api/dashboard` | The commuter dashboard payload |
@@ -359,8 +365,15 @@ Errors always come back as `{ "error": { "message", "code", "details?" } }`.
    horizon to *+1 hour* or set the weather to *heavy rain* and watch the
    predicted occupancy, confidence and factor bars recompute — this is the screen
    that answers *"is the AI real?"*.
-6. **Operator** — fleet state, the 24-hour load profile with both peaks, hotspots,
-   and the demand panel proving riders are choosing quieter trips.
+6. **Operator Command Center** — the control-room screen. Read the status bar
+   (network state, clock, model version), then the four overview tiles. Point at
+   the **crowd heatmap** and flip it from *Live load* to *+30 min* and *24 h peak*
+   — the corridors recolour because the engine is predicting, not just reporting.
+   Below it the **AI alerts** list the routes the model expects to crowd (affected
+   route, predicted occupancy, ETA, severity, recommended action), and **AI
+   recommendations** propose the interventions with the numbers behind them —
+   press **Dispatch** and the advisory is written into the `alerts` table.
+   **Route analytics** closes the loop with measured → predicted trends.
 7. **Alerts** — publish a crowding notice; it appears instantly for riders, and it
    lands in the `alerts` table (and in `service_alerts` after a dataset refresh).
 8. **Database** — open the Data Explorer: real row counts, primary/foreign keys and
@@ -387,6 +400,9 @@ these are intentionally left for the next iteration:
   dependency-free. The `OccupancyPredictor` seam and `PREDICTION_MODEL_URL`
   adapter exist precisely so a trained model can replace it without touching the
   API, the database or the UI.
+* **Dispatch automation** — *Dispatch* on the command centre publishes a real
+  advisory into `alerts` (visible to riders immediately); actually assigning a
+  spare vehicle is an operational system integration, not modelled here.
 * **Push delivery** — notification preferences are stored and rendered; an actual
   push/email provider is out of scope.
 * **Offline caching / PWA** — data is refetched on an interval instead.

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
+  CalendarClock,
   Compass,
   Info,
   Lightbulb,
@@ -14,6 +15,7 @@ import { useNetwork, usePlan } from '../hooks/useTransitData';
 import { JourneyPlanner, type PlannerValues } from '../components/route/JourneyPlanner';
 import { RouteOptionCard } from '../components/route/RouteOptionCard';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Segmented } from '../components/ui/Controls';
 import { AiAnalyzing } from '../components/route/AiAnalyzing';
@@ -125,6 +127,18 @@ export function RouteResults() {
         loading={plan.isFetching}
         quickPicks={network?.stops.slice(0, 6)}
       />
+
+      {plan.data?.serviceNote ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-400/8 px-4 py-3 text-xs text-sky-200">
+          <Badge tone="info" size="xs" icon={<CalendarClock className="size-3" />}>
+            Next service
+          </Badge>
+          <span className="text-mist-200">{plan.data.serviceNote}</span>
+          <span className="font-mono text-mist-400">
+            boarding {formatClock(plan.data.serviceResumesAt ?? plan.data.departAfter)}
+          </span>
+        </div>
+      ) : null}
 
       {!hasQuery ? (
         <EmptyState

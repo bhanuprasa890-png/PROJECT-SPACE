@@ -7,6 +7,7 @@ import type {
   CrowdForecastPoint,
   CrowdHotspot,
   CrowdReading,
+  CommandCenter,
   CreateAlertInput,
   ForecastSeries,
   HealthReport,
@@ -344,6 +345,9 @@ export const api = {
   predictionWeather: () => request<PredictionWeatherResponse>('/prediction/weather'),
 
   /* --------------------------------------------------------------- operator */
+
+  /** Operator Command Center — one payload for the control room. */
+  commandCenter: () => request<CommandCenter>('/operator/command-center'),
 
   operatorOverview: (windowHours = 24) =>
     request<OperatorOverview>(`/operator/overview${query({ window: windowHours })}`),

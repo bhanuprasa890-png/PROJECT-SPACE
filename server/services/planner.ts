@@ -10,6 +10,7 @@ import type {
 } from '../../shared/types';
 import type { Queryable } from '../db/client';
 import {
+  getServiceWindow,
   listDepartures,
   loadNetwork,
   type Departure,
@@ -673,17 +674,41 @@ export async function planJourney(
     crowdWeightScale,
   };
 
-  const evaluated: ScoredItinerary[] = [];
-  for (const rides of sequences) {
-    const itinerary = await evaluate(rides, context, departAfter);
-    if (itinerary) evaluated.push(itinerary);
+  const search = async (from: Date): Promise<ScoredItinerary[]> => {
+    const found: ScoredItinerary[] = [];
+    for (const rides of sequences) {
+      const itinerary = await evaluate(rides, context, from);
+      if (itinerary) found.push(itinerary);
+    }
+    return found;
+  };
+
+  let effective = departAfter;
+  let evaluated = await search(departAfter);
+  let serviceNote: string | undefined;
+
+  // Planning after the last departure of the day must not dead-end: roll the
+  // search forward to the next service window and label the result clearly
+  // instead of showing an empty screen.
+  if (!evaluated.length) {
+    const window = await getServiceWindow(db);
+    if (window) {
+      const rolled = new Date(window.nextStartAt);
+      const retry = await search(rolled);
+      if (retry.length) {
+        evaluated = retry;
+        effective = rolled;
+        const zone = window.timeZone === 'Asia/Kolkata' ? 'IST' : window.timeZone;
+        serviceNote = `Services have finished for today — showing the first departures from ${window.firstDeparture.slice(0, 5)} (${zone}).`;
+      }
+    }
   }
 
   if (!evaluated.length) {
     return {
       origin,
       destination,
-      departAfter: departAfter.toISOString(),
+      departAfter: effective.toISOString(),
       generatedAt: new Date().toISOString(),
       modelVersion: env.modelVersion,
       options: [],
@@ -888,7 +913,7 @@ export async function planJourney(
     return {
       origin,
       destination,
-      departAfter: departAfter.toISOString(),
+      departAfter: effective.toISOString(),
       generatedAt: new Date().toISOString(),
       modelVersion: env.modelVersion,
       options,
@@ -904,7 +929,7 @@ export async function planJourney(
       profileId: request.profileId ?? null,
       originStopId: origin.id,
       destinationStopId: destination.id,
-      departAfter: departAfter.toISOString(),
+      departAfter: effective.toISOString(),
       avoidCrowding,
       recommendedOptionId: recommended.id,
       options: options.map((option) => ({
@@ -926,7 +951,7 @@ export async function planJourney(
   return {
     origin,
     destination,
-    departAfter: departAfter.toISOString(),
+    departAfter: effective.toISOString(),
     generatedAt: new Date().toISOString(),
     modelVersion: env.modelVersion,
     options,
@@ -934,5 +959,12 @@ export async function planJourney(
     worstOptionId: worstOption?.id ?? recommended.id,
     searchId,
     insights,
+    ...(serviceNote
+      ? {
+          serviceNote,
+          serviceResumesAt: effective.toISOString(),
+          requestedDepartAfter: departAfter.toISOString(),
+        }
+      : {}),
   };
 }

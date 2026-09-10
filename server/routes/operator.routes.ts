@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../db/client';
 import { buildOperatorOverview } from '../services/operator';
+import { buildCommandCenter } from '../services/command-center';
 import { listFleet, listLineLoad } from '../repositories/operator.repo';
 import { listDemandSignals } from '../repositories/searches.repo';
 import { getAllConfig } from '../repositories/config.repo';
@@ -12,6 +13,16 @@ operatorRouter.get('/operator/overview', async (req, res) => {
   const db = await getDb();
   const windowHours = Number(req.query.window ?? 24);
   res.json(await buildOperatorOverview(db, Number.isFinite(windowHours) ? windowHours : 24));
+});
+
+/**
+ * The Operator Command Center: network overview, live route status, crowd
+ * heatmap, AI alerts, AI recommendations and route analytics in one payload.
+ * Everything is aggregated from Postgres and the prediction layer.
+ */
+operatorRouter.get('/operator/command-center', async (_req, res) => {
+  const db = await getDb();
+  res.json(await buildCommandCenter(db));
 });
 
 operatorRouter.get('/operator/fleet', async (_req, res) => {

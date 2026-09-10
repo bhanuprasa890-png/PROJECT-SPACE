@@ -281,6 +281,16 @@ export interface PlannerResponse {
   worstOptionId: string;
   searchId: number | null;
   insights: string[];
+  /**
+   * Set when the requested departure time is outside the service window and the
+   * planner rolled forward to the next available service (times are local to the
+   * agency).
+   */
+  serviceNote?: string;
+  /** The instant the returned itineraries actually depart, when rolled forward. */
+  serviceResumesAt?: string;
+  /** What the rider originally asked for. */
+  requestedDepartAfter?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -727,4 +737,188 @@ export interface PredictionEngineReport {
     scoreFormula: string;
   };
   generatedAt: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Operator Command Center                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Operating state of a route, the way a control room would triage it. */
+export type RouteOperatingStatus = 'on_time' | 'boarding' | 'crowded' | 'delayed' | 'disrupted';
+export type TrendDirection = 'rising' | 'falling' | 'stable';
+
+export interface CommandKpis {
+  activeRoutes: number;
+  totalRoutes: number;
+  activeVehicles: number;
+  totalVehicles: number;
+  maintenanceVehicles: number;
+  idleVehicles: number;
+  /** Routes whose worst monitored stop is above the crowding threshold. */
+  highCrowdRoutes: number;
+  /** Routes approaching the threshold (70–85%) — the watch list. */
+  watchRoutes: number;
+  averageOccupancyPct: number;
+  predictedOccupancyPct: number;
+  passengersOnboard: number;
+  networkCapacity: number;
+  status: 'nominal' | 'elevated' | 'critical';
+  statusDetail: string;
+}
+
+export interface CommandRouteRow {
+  lineId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  mode: TransitMode;
+  /** Worst monitored stop right now. */
+  occupancyPct: number;
+  /** Engine prediction for the worst stop, 30 minutes ahead. */
+  predictedPct: number;
+  /** Busiest reading for this route over the trailing 24 hours. */
+  peak24hPct: number;
+  level: CrowdLevel;
+  predictedLevel: CrowdLevel;
+  trend: TrendDirection;
+  trendDeltaPct: number;
+  vehiclesTotal: number;
+  vehiclesInService: number;
+  capacityPerVehicle: number;
+  headcount: number;
+  capacity: number;
+  onTimePct: number;
+  headwayMinutes: number;
+  nextDepartureAt: string | null;
+  serviceFirst: string | null;
+  serviceLast: string | null;
+  peakHour: number | null;
+  worstStopName: string | null;
+  stopsMonitored: number;
+  status: RouteOperatingStatus;
+  statusLabel: string;
+  statusDetail: string;
+  activeAlerts: number;
+  majorAlerts: number;
+  alertsLastHour: number;
+}
+
+export interface HeatmapStop {
+  stopId: string;
+  code: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  interchange: boolean;
+  boardings: number;
+  ratio: number;
+  level: CrowdLevel;
+  predictedRatio: number;
+  predictedLevel: CrowdLevel;
+  /** Busiest reading over the trailing 24 hours (the "peak profile" view). */
+  peakRatio: number;
+  peakLevel: CrowdLevel;
+  routes: string[];
+}
+
+export interface HeatmapSegment {
+  lineId: string;
+  routeNumber: string;
+  color: string;
+  mode: TransitMode;
+  fromStopId: string;
+  fromName: string;
+  toStopId: string;
+  toName: string;
+  fromLat: number;
+  fromLng: number;
+  toLat: number;
+  toLng: number;
+  ratio: number;
+  level: CrowdLevel;
+  predictedRatio: number;
+  predictedLevel: CrowdLevel;
+  peakRatio: number;
+  peakLevel: CrowdLevel;
+}
+
+export interface CrowdHeatmap {
+  bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
+  stops: HeatmapStop[];
+  segments: HeatmapSegment[];
+  legend: { level: CrowdLevel; label: string; range: string }[];
+}
+
+export interface AiAlert {
+  id: string;
+  kind: 'crowding' | 'disruption' | 'spread';
+  severity: 'critical' | 'major' | 'minor' | 'info';
+  lineId: string | null;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  stopName: string | null;
+  /** Headline in the operator's language, built from the stored values. */
+  message: string;
+  predictedOccupancyPct: number;
+  inMinutes: number;
+  estimatedAt: string;
+  confidencePct: number;
+  thresholdPct: number;
+  recommendedAction: string;
+  state: 'open' | 'watch';
+}
+
+export interface AiRecommendation {
+  id: string;
+  kind: 'add_vehicle' | 'redirect_passengers' | 'rebalance_headway' | 'fleet_readiness';
+  urgency: 'now' | 'next_30' | 'monitor';
+  lineId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  /** Set for redirect advice — the quieter route to steer riders toward. */
+  targetRouteNumber: string | null;
+  title: string;
+  detail: string;
+  impactLabel: string;
+  confidencePct: number;
+  evidence: { label: string; value: string }[];
+}
+
+export interface RouteAnalyticsPoint {
+  at: string;
+  ratio: number;
+  kind: 'history' | 'forecast';
+}
+
+export interface RouteAnalytics {
+  lineId: string;
+  routeNumber: string;
+  routeName: string;
+  color: string;
+  mode: TransitMode;
+  currentPct: number;
+  predictedPct: number;
+  deltaPct: number;
+  trend: TrendDirection;
+  peakPct: number;
+  peakLabel: string;
+  series: RouteAnalyticsPoint[];
+}
+
+export interface CommandCenter {
+  generatedAt: string;
+  timeZone: string;
+  simulated: true;
+  disclaimer: string;
+  engine: PredictionEngineDescriptor;
+  kpis: CommandKpis;
+  routes: CommandRouteRow[];
+  heatmap: CrowdHeatmap;
+  alerts: AiAlert[];
+  recommendations: AiRecommendation[];
+  analytics: { network: RouteAnalyticsPoint[]; routes: RouteAnalytics[] };
+  crowdingThresholdPct: number;
+  refreshSeconds: number;
 }

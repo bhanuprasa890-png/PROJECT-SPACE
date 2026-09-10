@@ -128,9 +128,27 @@ const ROUTES = [
     ],
   },
   {
+    // Operator Command Center — network overview, live route status, heatmap,
+    // AI alerts, AI recommendations and route analytics, all from
+    // `/api/operator/command-center`.
     path: '/operator',
-    name: 'Operator dashboard',
-    expect: ['Line load profile', 'System health', 'Metro Line 1', 'MTC 21G'],
+    name: 'Operator command center',
+    expect: [
+      'Operations Control',
+      'Network overview',
+      'Active routes',
+      'Active vehicles',
+      'High crowd routes',
+      'Live route status',
+      'Crowd heatmap',
+      'AI alerts',
+      'AI recommendations',
+      'Route analytics',
+      'Predicted vs current',
+      'Simulation Mode',
+      'MTC 21G',
+      'Tambaram',
+    ],
   },
   {
     path: '/alerts',

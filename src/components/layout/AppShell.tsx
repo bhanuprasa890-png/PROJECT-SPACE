@@ -31,7 +31,7 @@ interface NavItem {
 const PRIMARY_NAV: NavItem[] = [
   { to: '/', label: 'Commuter', description: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/routes', label: 'Plan', description: 'Route results', icon: Route },
-  { to: '/operator', label: 'Operator', description: 'Control room', icon: Gauge },
+  { to: '/operator', label: 'Control', description: 'Command center', icon: Gauge },
   { to: '/alerts', label: 'Alerts', description: 'Service notices', icon: Bell },
   { to: '/engine', label: 'AI engine', description: 'Prediction pipeline', icon: BrainCircuit },
   { to: '/settings', label: 'Settings', description: 'Preferences', icon: SettingsIcon },
@@ -52,8 +52,8 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     subtitle: 'Boarding plan, live load forecast and the model behind the prediction',
   },
   '/operator': {
-    title: 'Operator Dashboard',
-    subtitle: 'Fleet state, line load profiles and demand signals from real searches',
+    title: 'Operator Command Center',
+    subtitle: 'Network overview, live route status, crowd heatmap, AI alerts and recommendations',
   },
   '/alerts': {
     title: 'Alerts',

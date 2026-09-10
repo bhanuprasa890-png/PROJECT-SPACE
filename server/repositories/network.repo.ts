@@ -118,6 +118,52 @@ export async function listLines(db: Queryable): Promise<TransitLine[]> {
   return rows.map(mapLine);
 }
 
+export interface ServiceWindow {
+  timeZone: string;
+  firstDeparture: string;
+  lastDeparture: string;
+  /** Next instant the network starts running, as an ISO timestamp. */
+  nextStartAt: string;
+}
+
+/**
+ * The network's daily service window and the next time it opens, evaluated in
+ * the agency timezone from `service_patterns`. Used when a rider plans a journey
+ * after the last departure of the day.
+ */
+export async function getServiceWindow(db: Queryable): Promise<ServiceWindow | null> {
+  const row = await db.one<{
+    time_zone: string;
+    first_departure: string;
+    last_departure: string;
+    next_start_at: string | Date;
+  }>(
+    `with bounds as (
+       select min(sp.first_departure) as first_departure,
+              max(sp.last_departure)  as last_departure
+       from service_patterns sp
+     ),
+     tz as (select timezone from agencies order by id limit 1)
+     select tz.timezone as time_zone,
+            b.first_departure::text as first_departure,
+            b.last_departure::text  as last_departure,
+            (case
+               when (now() at time zone tz.timezone)::time < b.first_departure
+                 then ((now() at time zone tz.timezone)::date + b.first_departure)
+                 else (((now() at time zone tz.timezone)::date + 1) + b.first_departure)
+             end) at time zone tz.timezone as next_start_at
+     from bounds b cross join tz`,
+  );
+
+  if (!row) return null;
+  return {
+    timeZone: row.time_zone,
+    firstDeparture: row.first_departure,
+    lastDeparture: row.last_departure,
+    nextStartAt: new Date(row.next_start_at).toISOString(),
+  };
+}
+
 export async function getLineByIdOrCode(db: Queryable, idOrCode: string): Promise<TransitLine | null> {
   const row = await db.one<LineRow>(
     `select l.*, (select count(*) from line_stops ls where ls.line_id = l.id) as stop_count

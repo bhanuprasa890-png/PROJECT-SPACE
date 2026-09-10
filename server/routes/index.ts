@@ -20,7 +20,8 @@ import { datasetRouter } from './dataset.routes';
  *   predict  GET    /prediction | /prediction/series | /prediction/engine
  *            GET    /prediction/weather | /prediction/routes
  *   alerts   GET    /alerts · POST /alerts · PATCH /alerts/:id
- *   operator GET    /operator/overview | fleet | line-load | demand | config
+ *   operator GET    /operator/overview | command-center | fleet | line-load
+ *            GET    /operator/demand | config
  *   rider    GET    /dashboard | /profile | /settings/options | /watchlist
  *   dataset  GET    /dataset/tables | /dataset/tables/:table | /dataset/schema/:table
  *            POST   /dataset/refresh            rebuild canonical demo dataset
