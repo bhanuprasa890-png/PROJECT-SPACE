@@ -160,7 +160,7 @@ npm run db:verify
 ```
 
 ```
-[db] verification — 43/43 checks passed
+[db] verification — 45/45 checks passed
   ✓ columns routes — 8 columns            ✓ foreign keys vehicle_snapshots — 2 fk
   ✓ primary key routes                    ✓ indexes occupancy_predictions — 6 index(es)
   ✓ routes ≥ 6 rows — 6 rows              ✓ all three roles present — admin, commuter, operator
