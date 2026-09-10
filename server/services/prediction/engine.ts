@@ -428,7 +428,7 @@ export function describeEngine(args: {
   return {
     id: args.predictor.id,
     kind: args.predictor.kind,
-    version: `${args.config.version}·${args.predictor.id}`,
+    version: `${args.config.version} + ${args.predictor.id} ${args.predictor.version}`,
     simulated: true,
     note: args.predictor.note ?? 'Prediction engine',
     inputs: INPUT_CATALOGUE.map((entry) => entry.label),
