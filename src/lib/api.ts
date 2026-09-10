@@ -1,0 +1,468 @@
+import type {
+  AiDecisionApplyResult,
+  AiDecisionProposal,
+  Alert,
+  AlertStatus,
+  DatasetOverview,
+  DatasetTablePage,
+  CommuterDashboard,
+  CrowdForecastPoint,
+  CrowdHotspot,
+  CrowdReading,
+  CommandCenter,
+  DirectionsResult,
+  MapJourneyPayload,
+  MapNetworkPayload,
+  MapsConfigPayload,
+  CreateAlertInput,
+  ForecastSeries,
+  HealthReport,
+  LineDetail,
+  OccupancyPredictionResult,
+  OperatorOverview,
+  PlannerResponse,
+  PredictionEngineReport,
+  RiderProfile,
+  SettingsOptions,
+  StationBoard,
+  Stop,
+  TransitLine,
+  WeatherSnapshot,
+  TransitMode,
+  WatchlistItem,
+} from '@shared/types';
+
+/**
+ * Single typed entry point for the TransitPulse API.
+ *
+ * Every screen fetches through these functions — no component talks to a
+ * database, and no component invents data.
+ */
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api';
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code = 'REQUEST_FAILED',
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // The planner query can ask to be held for a moment so the "AI analyzing
+  // routes…" state stays readable during a live demo.
+  const minDelayMs = Number(new URLSearchParams(path.split('?')[1] ?? '').get('analyzeMs') ?? 0);
+  const startedAt = minDelayMs > 0 ? Date.now() : 0;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    });
+  } catch (error) {
+    throw new ApiError(
+      `Cannot reach the TransitPulse API (${(error as Error).message})`,
+      0,
+      'NETWORK_ERROR',
+    );
+  }
+
+  if (minDelayMs > 0) {
+    const remaining = minDelayMs - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+  }
+
+  if (response.status === 204) return undefined as T;
+
+  const text = await response.text();
+  const payload = text ? (JSON.parse(text) as unknown) : null;
+
+  if (!response.ok) {
+    const body = payload as { error?: { message?: string; code?: string } } | null;
+    throw new ApiError(
+      body?.error?.message ?? `Request failed with status ${response.status}`,
+      response.status,
+      body?.error?.code ?? 'REQUEST_FAILED',
+    );
+  }
+
+  return payload as T;
+}
+
+const query = (params: Record<string, string | number | boolean | undefined | null>): string => {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    search.set(key, String(value));
+  }
+  const serialised = search.toString();
+  return serialised ? `?${serialised}` : '';
+};
+
+/* -------------------------------------------------------------------------- */
+/* Health + network                                                           */
+/* -------------------------------------------------------------------------- */
+
+/** `GET /api/operator/ai-decision` — the proposal plus the simulation flag. */
+export interface AiDecisionPayload {
+  decision: AiDecisionProposal;
+  simulated: true;
+  generatedAt: string;
+}
+
+export interface HealthPayload extends HealthReport {
+  uptimeSeconds: number;
+  defaults: { profileId: string };
+  dataClassification?: 'demo-simulated';
+  dataset?: { name: string; requestedAs: string; rows: number }[];
+}
+
+
+export interface PredictionEnginePayload extends PredictionEngineReport {
+  simulated: true;
+  disclaimer: string;
+  weatherConditions: string[];
+}
+
+export interface PredictionResponse {
+  simulated: true;
+  disclaimer: string;
+  /** `auto` uses the simulated weather table, `none` disables the factor. */
+  weatherScenario: string;
+  prediction: OccupancyPredictionResult;
+}
+
+export interface PredictionSeriesResponse {
+  simulated: true;
+  disclaimer: string;
+  minutes: number;
+  stepMinutes: number;
+  points: OccupancyPredictionResult[];
+}
+
+export interface PredictionWeatherResponse {
+  simulated: true;
+  disclaimer: string;
+  source: string;
+  current: WeatherSnapshot | null;
+  slots: WeatherSnapshot[];
+  available: { condition: string; demandMultiplier: number | null }[];
+}
+
+
+export const api = {
+  health: () => request<HealthPayload>('/health'),
+
+  /* ------------------------------------------------- canonical demo dataset */
+
+  /**
+   * The published route-level dataset (routes, stops, vehicles, predictions,
+   * options, alerts, users). Read straight from Postgres through the API — the
+   * browser never holds database credentials.
+   */
+  datasetTables: () => request<DatasetOverview>('/dataset/tables'),
+
+  datasetRows: (
+    table: string,
+    params: { limit?: number; offset?: number; orderBy?: string; direction?: 'asc' | 'desc' } = {},
+  ) =>
+    request<DatasetTablePage>(
+      `/dataset/tables/${encodeURIComponent(table)}${query({
+        limit: params.limit,
+        offset: params.offset,
+        orderBy: params.orderBy,
+        direction: params.direction,
+      })}`,
+    ),
+
+  datasetRefresh: () =>
+    request<{ refreshedAt: string; counts: Record<string, number> }>('/dataset/refresh', {
+      method: 'POST',
+    }),
+
+  network: () =>
+    request<{
+      agency: { id: string; name: string; city: string; timezone: string } | null;
+      stops: Stop[];
+      lines: TransitLine[];
+      model: { version: string; accuracy: number };
+    }>('/network'),
+
+  stops: (params: { q?: string; limit?: number; interchange?: boolean } = {}) =>
+    request<{ stops: Stop[]; count: number }>(
+      `/stops${query({ q: params.q, limit: params.limit, interchange: params.interchange })}`,
+    ),
+
+  stopBoard: (stopId: string, horizonMinutes = 60) =>
+    request<{
+      stop: Stop;
+      departures: (StationBoard['departures'][number] & { lineId: string })[];
+    }>(`/stops/${stopId}${query({ horizon: horizonMinutes })}`),
+
+  lines: () => request<{ lines: TransitLine[] }>('/lines'),
+
+  line: (lineId: string) => request<LineDetail>(`/lines/${lineId}`),
+
+  /* ---------------------------------------------------------------- planning */
+
+  plan: (params: {
+    origin: string;
+    destination: string;
+    departAfter?: string;
+    profileId?: string;
+    avoidCrowding?: boolean;
+    maxTransfers?: number;
+    crowdTolerance?: number;
+    persist?: boolean;
+    /** Minimum time the request should take, so the analysing state is visible. */
+    analyzeMs?: number;
+  }) =>
+    request<PlannerResponse>(
+      `/plan${query({
+        origin: params.origin,
+        destination: params.destination,
+        departAfter: params.departAfter,
+        profileId: params.profileId,
+        avoidCrowding: params.avoidCrowding,
+        maxTransfers: params.maxTransfers,
+        crowdTolerance: params.crowdTolerance,
+        persist: params.persist,
+        analyzeMs: params.analyzeMs,
+      })}`,
+    ),
+
+  journeyContext: (lineId: string, stopId: string, horizonMinutes = 90) =>
+    request<{
+      line: TransitLine;
+      stop: Stop;
+      forecast: ForecastSeries | null;
+      alerts: Alert[];
+    }>(`/journey-context${query({ lineId, stopId, horizon: horizonMinutes })}`),
+
+  recentSearches: (profileId?: string, limit = 6) =>
+    request<{
+      searches: {
+        id: string;
+        originStopId: string;
+        originStopName: string;
+        destinationStopId: string;
+        destinationStopName: string;
+        departAfter: string;
+        avoidCrowding: boolean;
+        optionsReturned: number;
+        createdAt: string;
+      }[];
+    }>(`/searches/recent${query({ profileId, limit })}`),
+
+  /* ------------------------------------------------------------------ crowd */
+
+  liveCrowding: (limit = 120) =>
+    request<{
+      generatedAt: string;
+      readings: CrowdReading[];
+      hotspots: CrowdHotspot[];
+      lines: { id: string; code: string; color: string }[];
+      stops: { id: string; name: string; code: string }[];
+    }>(`/crowd/live${query({ limit })}`),
+
+  forecast: (lineId: string, stopId: string, horizonMinutes = 120) =>
+    request<ForecastSeries>(`/crowd/forecast${query({ lineId, stopId, horizon: horizonMinutes })}`),
+
+  crowdHistory: (lineId: string, stopId: string, hours = 24) =>
+    request<{ lineId: string; stopId: string; hours: number; observations: CrowdReading[] }>(
+      `/crowd/history${query({ lineId, stopId, hours })}`,
+    ),
+
+/* ----------------------------------------------------------------- alerts */
+
+  alerts: (params: { status?: AlertStatus | 'all'; severity?: string; lineId?: string; limit?: number } = {}) =>
+    request<{
+      alerts: Alert[];
+      count: number;
+      severityBreakdown: Record<'info' | 'minor' | 'major' | 'critical', number>;
+    }>(
+      `/alerts${query({
+        status: params.status,
+        severity: params.severity,
+        lineId: params.lineId,
+        limit: params.limit,
+      })}`,
+    ),
+
+  createAlert: (input: CreateAlertInput) =>
+    request<Alert>('/alerts', { method: 'POST', body: JSON.stringify(input) }),
+
+  updateAlertStatus: (alertId: string, status: AlertStatus) =>
+    request<Alert>(`/alerts/${alertId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+
+  deleteAlert: (alertId: string) => request<void>(`/alerts/${alertId}`, { method: 'DELETE' }),
+
+  /* ----------------------------------------------------------- AI decision */
+
+  /** The AI decision for one route — detection, numbered actions, projection. */
+  aiDecision: (lineIdOrCode: string) =>
+    request<AiDecisionPayload>(`/operator/ai-decision${query({ line: lineIdOrCode })}`),
+
+  /** Apply the recommendation: ledger row, vehicle release and rider alert. */
+  applyAiDecision: (input: { lineId: string; appliedBy?: string; force?: boolean }) =>
+    request<AiDecisionApplyResult>('/operator/ai-decision/apply', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  /* ------------------------------------------------------------- google maps */
+
+  /**
+   * What the browser may know about the Maps setup: a referrer-restricted browser
+   * key when one is configured, and whether the API can proxy Directions. The
+   * server key never leaves the API process.
+   */
+  mapsConfig: () => request<MapsConfigPayload>('/maps/config'),
+
+  /** Every route, stop, vehicle and alert with coordinates, for the map layers. */
+  mapsNetwork: () => request<MapNetworkPayload>('/maps/network'),
+
+  /** Map view of a planned journey: paths, stop nodes and predicted load per leg. */
+  mapsJourney: (params: {
+    origin: string;
+    destination: string;
+    departAfter?: string;
+    avoidCrowding?: boolean;
+    maxTransfers?: number;
+    analyzeMs?: number;
+  }) =>
+    request<MapJourneyPayload>(
+      `/maps/journey${query({
+        origin: params.origin,
+        destination: params.destination,
+        departAfter: params.departAfter,
+        avoidCrowding: params.avoidCrowding,
+        maxTransfers: params.maxTransfers,
+        analyzeMs: params.analyzeMs,
+      })}`,
+    ),
+
+  /** Directions proxy — road-snapped path; the Google key stays on the server. */
+  directions: (params: { origin: string; destination: string; mode?: string }) =>
+    request<DirectionsResult>(
+      `/maps/directions${query({ origin: params.origin, destination: params.destination, mode: params.mode })}`,
+    ),
+
+  /* ------------------------------------------------------------- prediction */
+
+  predictionEngine: () => request<PredictionEnginePayload>('/prediction/engine'),
+
+  predictionRoutes: () =>
+    request<{
+      routes: {
+        id: string;
+        code: string;
+        name: string;
+        mode: TransitMode;
+        capacityPerVehicle: number;
+        headwayMinutes: number;
+        color: string;
+      }[];
+    }>('/prediction/routes'),
+
+  prediction: (params: {
+    lineId: string;
+    stopId?: string | null;
+    at?: string;
+    capacity?: number;
+    weather?: string;
+  }) =>
+    request<PredictionResponse>(
+      `/prediction${query({
+        lineId: params.lineId,
+        stopId: params.stopId,
+        at: params.at,
+        capacity: params.capacity,
+        weather: params.weather,
+      })}`,
+    ),
+
+  predictionSeries: (params: {
+    lineId: string;
+    stopId?: string | null;
+    at?: string;
+    minutes?: number;
+    stepMinutes?: number;
+    weather?: string;
+  }) =>
+    request<PredictionSeriesResponse>(
+      `/prediction/series${query({
+        lineId: params.lineId,
+        stopId: params.stopId,
+        at: params.at,
+        minutes: params.minutes,
+        stepMinutes: params.stepMinutes,
+        weather: params.weather,
+      })}`,
+    ),
+
+  predictionWeather: () => request<PredictionWeatherResponse>('/prediction/weather'),
+
+  /* --------------------------------------------------------------- operator */
+
+  /** Operator Command Center — one payload for the control room. */
+  commandCenter: () => request<CommandCenter>('/operator/command-center'),
+
+  operatorOverview: (windowHours = 24) =>
+    request<OperatorOverview>(`/operator/overview${query({ window: windowHours })}`),
+
+  operatorLineLoad: (dayType = 'weekday') =>
+    request<{ dayType: string; lines: OperatorOverview['lines'] }>(
+      `/operator/line-load${query({ dayType })}`,
+    ),
+
+  operatorConfig: () => request<{ config: Record<string, unknown> }>('/operator/config'),
+
+  /* ------------------------------------------------------------------ rider */
+
+  dashboard: (profileId?: string) =>
+    request<CommuterDashboard>(`/dashboard${query({ profileId })}`),
+
+  profile: (profileId?: string) => request<RiderProfile>(`/profile${query({ profileId })}`),
+
+  updateProfile: (patch: Partial<RiderProfile>, profileId?: string) =>
+    request<RiderProfile>(`/profile${query({ profileId })}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  settingsOptions: () => request<SettingsOptions>('/settings/options'),
+
+  watchlist: (profileId?: string) =>
+    request<{ items: WatchlistItem[] }>(`/watchlist${query({ profileId })}`),
+
+  createWatchlistItem: (
+    input: {
+      label: string;
+      originStopId: string;
+      destinationStopId: string;
+      departTime?: string | null;
+      days?: string[];
+      avoidCrowded?: boolean;
+      notify?: boolean;
+    },
+    profileId?: string,
+  ) =>
+    request<WatchlistItem>(`/watchlist${query({ profileId })}`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  toggleWatchlistItem: (itemId: string, profileId?: string) =>
+    request<WatchlistItem>(`/watchlist/${itemId}/toggle${query({ profileId })}`, { method: 'POST' }),
+
+  deleteWatchlistItem: (itemId: string, profileId?: string) =>
+    request<void>(`/watchlist/${itemId}${query({ profileId })}`, { method: 'DELETE' }),
+};
+
+export type { CrowdForecastPoint, TransitMode };
