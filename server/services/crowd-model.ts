@@ -4,42 +4,50 @@ import type {
   CrowdLevel,
   ForecastFactor,
   ForecastSeries,
+  PredictionEngineDescriptor,
   TransitMode,
 } from '../../shared/types';
 import type { Queryable } from '../db/client';
-import {
-  MODEL_DEFAULTS,
-  getConfig,
-  type CrowdModelConfig,
-} from '../repositories/config.repo';
+import { MODEL_DEFAULTS, getConfig, type CrowdModelConfig } from '../repositories/config.repo';
 import {
   listBaselines,
+  listLatestReadings,
   listPersistedForecasts,
   listRecentObservations,
   upsertForecasts,
-  type BaselineCell,
 } from '../repositories/crowd.repo';
 import { alertsForLine } from '../repositories/alerts.repo';
-import { getLineByIdOrCode, getStop } from '../repositories/network.repo';
-import { clamp, dayTypeFor, fractionalHour, minutesBetween, round } from '../lib/time';
+import { getAgency, getLineByIdOrCode, getStop } from '../repositories/network.repo';
+import { clamp, round } from '../lib/time';
+import {
+  buildPredictionInput,
+  createPredictor,
+  describeEngine,
+  listWeatherSlots,
+  nearestWeather,
+  SignalIndex,
+  type OccupancyPredictor,
+  type WeatherSignal,
+  type WeatherSlot,
+} from './prediction';
 
 /**
- * TransitPulse crowd model
- * ========================
+ * TransitPulse crowd model — planner-facing facade
+ * ===============================================
  *
- * A transparent, explainable occupancy model. It blends four signals:
+ * The maths now lives in the prediction layer:
  *
- *   1. **Learned baseline** — the 14-day hourly mean *and* 90th percentile of
- *      `crowd_observations` for this exact line/stop/day-type/hour cell.
- *   2. **Continuity** — smooth interpolation between the current and next hour
- *      so the curve does not step at :59.
- *   3. **Service pressure** — short headways bunch passengers onto fewer
- *      vehicles; long headways spread them out.
- *   4. **Live context** — active crowding alerts and upstream load carried down
- *      the line.
+ *   server/services/prediction/ — Input Data → Prediction Engine →
+ *   Occupancy Prediction → Crowd Classification → Route Optimization
  *
- * Every prediction returns the per-factor contributions that produced it, which
- * is what the Route Details screen renders as "why this prediction".
+ * This facade keeps the planner's synchronous, in-memory hot path: it loads
+ * every signal once per request (historical cells, live readings, simulated
+ * weather) and then scores dozens of legs without touching the database again.
+ * It reports the same `PredictionEngineDescriptor` as the API engine, so the
+ * planner, the forecast chart and the Prediction Engine screen all describe the
+ * same model.
+ *
+ * SIMULATION: every input is simulated demo data. No production accuracy claim.
  */
 
 export interface Prediction {
@@ -52,6 +60,8 @@ export interface Prediction {
   factors: ForecastFactor[];
   /** Ratio the model would report with live context stripped out. */
   baselineRatio: number;
+  /** Which predictor produced this value. */
+  engine: PredictionEngineDescriptor;
 }
 
 export interface PredictParams {
@@ -64,196 +74,106 @@ export interface PredictParams {
   /** Occupancy ratio already on board when the vehicle reaches this stop. */
   upstreamRatio?: number;
   timeZone?: string;
+  /** Optional explicit weather signal; defaults to the preloaded slot. */
+  weather?: WeatherSignal | null;
 }
-
-interface BaselineCellLookup {
-  byStop: Map<string, BaselineCell>;
-  byLine: Map<string, BaselineCell>;
-}
-
-const cellKey = (lineId: string, stopId: string | null, dayType: string, hour: number): string =>
-  `${lineId}|${stopId ?? '*'}|${dayType}|${hour}`;
-
-/**
- * Prior demand curve used only when the database has no observations for a
- * cell (e.g. a brand-new line). Learned data always wins.
- */
-const PRIOR_CURVE: Record<number, number> = {
-  5: 0.4, 6: 0.62, 7: 1.0, 8: 1.26, 9: 1.04, 10: 0.78, 11: 0.72, 12: 0.78,
-  13: 0.82, 14: 0.74, 15: 0.8, 16: 0.94, 17: 1.18, 18: 1.28, 19: 0.96,
-  20: 0.72, 21: 0.56, 22: 0.44, 23: 0.32,
-};
-
-const MODE_BASE: Record<TransitMode, number> = {
-  metro: 0.5,
-  bus: 0.46,
-  tram: 0.42,
-  brt: 0.48,
-  ferry: 0.34,
-};
 
 export class CrowdModel {
-  private readonly baseline: BaselineCellLookup;
-  private readonly pressure: Map<string, number>;
+  private readonly timeZone: string;
 
   constructor(
-    cells: BaselineCell[],
+    private readonly index: SignalIndex,
     private readonly config: CrowdModelConfig,
-    pressureByLine: Map<string, number> = new Map(),
+    private readonly predictor: OccupancyPredictor,
+    private readonly weatherSlots: WeatherSlot[] = [],
+    timeZone = 'UTC',
+    private readonly pressureByLine: Map<string, number> = new Map(),
   ) {
-    const byStop = new Map<string, BaselineCell>();
-    const byLine = new Map<string, BaselineCell>();
-
-    for (const cell of cells) {
-      if (cell.stopId) {
-        byStop.set(cellKey(cell.lineId, cell.stopId, cell.dayType, cell.hourOfDay), cell);
-      } else {
-        byLine.set(cellKey(cell.lineId, null, cell.dayType, cell.hourOfDay), cell);
-      }
-    }
-
-    this.baseline = { byStop, byLine };
-    this.pressure = pressureByLine;
+    this.timeZone = timeZone;
   }
 
   static async load(db: Queryable, lineIds?: string[]): Promise<CrowdModel> {
-    const config = await getConfig<CrowdModelConfig>(db, 'crowd_model', MODEL_DEFAULTS);
-    const cells = await listBaselines(db, { lineIds });
-    return new CrowdModel(cells, config);
+    const [config, agency, cells, readings, weatherSlots] = await Promise.all([
+      getConfig<CrowdModelConfig>(db, 'crowd_model', MODEL_DEFAULTS),
+      getAgency(db),
+      listBaselines(db, lineIds?.length ? { lineIds } : {}),
+      listLatestReadings(db, { limit: 800 }),
+      listWeatherSlots(db, { hours: 12 }),
+    ]);
+
+    return new CrowdModel(
+      new SignalIndex(cells, readings),
+      config,
+      createPredictor(),
+      weatherSlots,
+      agency?.timezone ?? 'UTC',
+    );
   }
 
-  /** Mean occupancy for a baseline cell, falling back to the line-wide cell. */
-  private cell(
-    lineId: string,
-    stopId: string,
-    dayType: string,
-    hour: number,
-  ): { avg: number; p90: number; sampleSize: number; scope: 'stop' | 'line' | 'prior' } | null {
-    const hourNorm = ((hour % 24) + 24) % 24;
-    const stopCell = this.baseline.byStop.get(cellKey(lineId, stopId, dayType, hourNorm));
-    if (stopCell) {
-      return {
-        avg: stopCell.avgRatio,
-        p90: stopCell.p90Ratio,
-        sampleSize: stopCell.sampleSize,
-        scope: 'stop',
-      };
-    }
-    const lineCell = this.baseline.byLine.get(cellKey(lineId, null, dayType, hourNorm));
-    if (lineCell) {
-      return {
-        avg: lineCell.avgRatio,
-        p90: lineCell.p90Ratio,
-        sampleSize: lineCell.sampleSize,
-        scope: 'line',
-      };
-    }
-    return null;
+  /** Model identity, shared with the prediction engine's own descriptor. */
+  get engine(): PredictionEngineDescriptor {
+    return describeEngine({
+      predictor: this.predictor,
+      config: this.config,
+      weatherEnabled: this.weatherSlots.length > 0,
+    });
   }
 
-  private priorFor(hour: number, mode: TransitMode, dayType: string): number {
-    const weekend = dayType !== 'weekday';
-    const raw = PRIOR_CURVE[hour] ?? 0.4;
-    // Weekend demand is flatter and peaks later in the day.
-    const adjusted = weekend ? 0.55 + raw * 0.45 : raw;
-    return clamp(MODE_BASE[mode] * adjusted, 0.08, 1.1);
+  get modelVersion(): string {
+    return this.config.version;
+  }
+
+  /** Calibration on the simulated history — a prototype gauge, not an SLA. */
+  get calibration(): number {
+    return this.config.accuracy;
   }
 
   /**
-   * Predicts occupancy for a line/stop at an instant in the future.
-   * Returns both the value and the reason it was produced.
+   * Predicts occupancy for a line/stop at an instant in the future, returning
+   * the value plus every contribution that produced it.
    */
-  predict(params: PredictParams): Prediction {
-    const { lineId, stopId, at, capacity } = params;
-    const timeZone = params.timeZone ?? 'UTC';
-    const dayType = dayTypeFor(at, timeZone);
-    const fHour = fractionalHour(at, timeZone);
-    const hour = Math.floor(fHour);
-    const fraction = fHour - hour;
+  async predict(params: PredictParams): Promise<Prediction> {
+    const timeZone = params.timeZone ?? this.timeZone;
+    const weather =
+      params.weather !== undefined
+        ? params.weather
+        : nearestWeather(this.weatherSlots, params.at);
 
-    const current = this.cell(lineId, stopId, dayType, hour);
-    const next = this.cell(lineId, stopId, dayType, hour + 1);
-    const mode: TransitMode = params.mode ?? 'metro';
-
-    const currentAvg = current?.avg ?? this.priorFor(hour, mode, dayType);
-    const nextAvg = next?.avg ?? currentAvg;
-    const currentP90 = current?.p90 ?? currentAvg * 1.12;
-    const nextP90 = next?.p90 ?? currentP90;
-
-    // (1) + (2) learned baseline, interpolated across the hour boundary.
-    const mean = currentAvg + (nextAvg - currentAvg) * fraction;
-    const peak = currentP90 + (nextP90 - currentP90) * fraction;
-    const blended = mean * 0.68 + peak * 0.32;
-
-    const factors: ForecastFactor[] = [
-      {
-        key: 'baseline',
-        label: 'Learned demand for this hour',
-        contribution: round(blended, 3),
-        detail:
-          current?.scope === 'stop'
-            ? `14-day average at ${Math.round(blended * 100)}% occupancy (${current.sampleSize} samples)`
-            : 'Line-wide average — no stop-level history yet',
+    const input = buildPredictionInput({
+      route: {
+        lineId: params.lineId,
+        lineCode: params.lineId,
+        lineName: params.lineId,
+        mode: params.mode ?? 'metro',
+        capacity: params.capacity,
+        headwayMinutes: params.headwayMinutes ?? 8,
       },
-    ];
-
-    // (3) headway pressure: 8 minutes is the reference headway.
-    const headway = params.headwayMinutes ?? 8;
-    const headwayFactor = clamp(8 / Math.max(headway, 1), 0.88, 1.12);
-    const headwayContribution = blended * (headwayFactor - 1);
-    factors.push({
-      key: 'headway',
-      label: 'Service frequency pressure',
-      contribution: round(headwayContribution, 3),
-      detail:
-        headwayFactor > 1
-          ? `${headway} min headway packs more riders into each service`
-          : `${headway} min headway spreads demand across services`,
+      stopId: params.stopId,
+      at: params.at,
+      timeZone,
+      index: this.index,
+      weather,
+      upstreamRatio: params.upstreamRatio ?? 0,
+      alertPressure: this.pressureByLine.get(params.lineId) ?? 0,
     });
 
-    // (4) live context: crowding alerts and upstream carry-over.
-    const alertBoost = this.pressure.get(lineId) ?? 0;
-    const upstream = params.upstreamRatio ?? 0;
-    const upstreamContribution = upstream > 0 ? upstream * 0.14 : 0;
-
-    if (alertBoost > 0) {
-      factors.push({
-        key: 'alerts',
-        label: 'Active crowding alerts',
-        contribution: round(alertBoost, 3),
-        detail: 'Operational notice on this line raises the expected load',
-      });
-    }
-    if (upstreamContribution > 0) {
-      factors.push({
-        key: 'upstream',
-        label: 'Upstream carry-over',
-        contribution: round(upstreamContribution, 3),
-        detail: `Vehicle already ${Math.round(upstream * 100)}% full when it arrives`,
-      });
-    }
-
-    const ratio = clamp(blended + headwayContribution + alertBoost + upstreamContribution, 0.04, 1.4);
-
-    const horizonMinutes = Math.max(0, minutesBetween(new Date(), at));
-    // Confidence grows with the number of historical samples behind the cell,
-    // then decays with the forecast horizon.
-    const sampleConfidence = current ? clamp(0.74 + current.sampleSize / 45, 0.74, 1) : 0.66;
-    const confidence = clamp(
-      (0.97 - horizonMinutes * 0.0018) * sampleConfidence,
-      this.config.confidenceFloor,
-      0.97,
-    );
+    const core = await this.predictor.predict(input);
 
     return {
-      ratio: round(ratio, 3),
-      headcount: Math.max(1, Math.round(ratio * capacity)),
-      level: crowdLevelFromRatio(ratio),
-      confidence: round(confidence, 3),
-      lower: round(clamp(ratio * (1 - 0.16 - horizonMinutes / 1400), 0, 1.5), 3),
-      upper: round(clamp(ratio * (1 + 0.18 + horizonMinutes / 1100), 0, 1.6), 3),
-      factors,
-      baselineRatio: round(blended, 3),
+      ratio: round(core.ratio, 3),
+      headcount: Math.max(1, Math.round(core.ratio * params.capacity)),
+      level: crowdLevelFromRatio(core.ratio),
+      confidence: round(core.confidence, 3),
+      lower: round(clamp(core.lowerRatio, 0, 1.5), 3),
+      upper: round(clamp(core.upperRatio, 0, 1.6), 3),
+      factors: core.factors.map((factor) => ({
+        key: factor.key,
+        label: factor.label,
+        contribution: round(factor.contribution, 4),
+        detail: factor.detail,
+      })),
+      baselineRatio: round(core.baselineRatio, 3),
+      engine: this.engine,
     };
   }
 }
@@ -286,10 +206,13 @@ export async function buildForecastSeries(
   const step = config.stepMinutes;
   const now = request.now ?? new Date();
 
-  const [baselines, alerts, history] = await Promise.all([
+  const [baselines, alerts, history, readings, weatherSlots, agency] = await Promise.all([
     listBaselines(db, { lineIds: [line.id] }),
     alertsForLine(db, line.id),
     listRecentObservations(db, { lineId: line.id, stopId: stop.id, hours: 26, limit: 80 }),
+    listLatestReadings(db, { limit: 400 }),
+    listWeatherSlots(db, { hours: 8 }),
+    getAgency(db),
   ]);
 
   const pressure = new Map<string, number>();
@@ -298,7 +221,14 @@ export async function buildForecastSeries(
     pressure.set(line.id, Math.min(0.09, crowdingAlerts.length * 0.035));
   }
 
-  const model = new CrowdModel(baselines, config, pressure);
+  const model = new CrowdModel(
+    new SignalIndex(baselines, readings),
+    config,
+    createPredictor(),
+    weatherSlots,
+    agency?.timezone ?? 'UTC',
+    pressure,
+  );
 
   const persisted = await listPersistedForecasts(db, {
     lineId: line.id,
@@ -329,7 +259,7 @@ export async function buildForecastSeries(
       continue;
     }
 
-    const prediction = model.predict({
+    const prediction = await model.predict({
       lineId: line.id,
       stopId: stop.id,
       at: targetAt,
@@ -354,7 +284,7 @@ export async function buildForecastSeries(
     points.find((point) => point.horizonMinutes <= 20) ?? points[0] ?? null;
   if (!headline) return null;
 
-  const headlinePrediction = model.predict({
+  const headlinePrediction = await model.predict({
     lineId: line.id,
     stopId: stop.id,
     at: new Date(headline.targetAt),
@@ -424,6 +354,7 @@ export async function buildForecastSeries(
     generatedAt: now.toISOString(),
     modelVersion: config.version,
     accuracy: config.accuracy,
+    engine: model.engine,
     sampleSize: baselines.find((cell) => cell.lineId === line.id && cell.stopId === stop.id)?.sampleSize ?? 0,
     headline,
     points,

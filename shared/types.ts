@@ -9,6 +9,9 @@
 export type TransitMode = 'metro' | 'bus' | 'tram' | 'brt' | 'ferry';
 
 /** Green / yellow / orange / red bucket shown across the product. */
+/** Service-day classification used by the timetable and the prediction model. */
+export type DayType = 'weekday' | 'saturday' | 'sunday';
+
 /**
  * Commuter-facing crowd bands (see `shared/crowd.ts`):
  * Low < 60% · Moderate 60–85% · High > 85% occupancy.
@@ -135,9 +138,14 @@ export interface ForecastSeries {
   capacity: number;
   generatedAt: string;
   modelVersion: string;
-  /** Model quality gauges surfaced in the UI. */
+  /**
+   * Calibration on the *simulated* demo history. This is a prototype gauge, not
+   * a production accuracy claim.
+   */
   accuracy: number;
   sampleSize: number;
+  /** Which predictor produced this series (see `PredictionEngineDescriptor`). */
+  engine?: PredictionEngineDescriptor;
   headline: CrowdForecastPoint;
   points: CrowdForecastPoint[];
   factors: ForecastFactor[];
@@ -507,7 +515,13 @@ export interface CommuterDashboard {
     activeAlerts: number;
   };
   stationBoards: StationBoard[];
-  model: { version: string; accuracy: number; horizonMinutes: number };
+  model: {
+    version: string;
+    /** Calibration on simulated history — not a production accuracy claim. */
+    accuracy: number;
+    horizonMinutes: number;
+    engine?: PredictionEngineDescriptor;
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -587,4 +601,130 @@ export interface HealthReport {
   };
   modelVersion: string;
   serverTime: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Prediction layer (Input Data → Engine → Occupancy → Classification)        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * SIMULATED PROTOTYPE — every prediction is computed from synthetic demo data
+ * (see `supabase/seed/*`). Nothing here measures or claims real-world accuracy.
+ */
+export interface PredictionEngineDescriptor {
+  /** Predictor id, e.g. `heuristic-ensemble` or `external-model`. */
+  id: string;
+  kind: 'heuristic-ensemble' | 'external-model';
+  version: string;
+  /** Always true for this prototype: predictions come from simulated data. */
+  simulated: boolean;
+  note: string;
+  /** The inputs the engine consumes, in pipeline order. */
+  inputs: string[];
+  weatherSource: 'weather_conditions (simulated)' | 'disabled';
+  /** Set when the configured external model was unreachable. */
+  fallbackNote?: string | null;
+  disclaimer: string;
+}
+
+export interface CrowdClass {
+  level: CrowdLevel;
+  label: string;
+  description: string;
+  /** Display range, e.g. `60–85%`. */
+  range: string;
+}
+
+export interface PredictionFactorReport {
+  key: string;
+  label: string;
+  /** Contribution in occupancy percentage points (signed). */
+  contributionPct: number;
+  contributionRatio: number;
+  detail: string;
+  direction: 'raises' | 'lowers' | 'neutral';
+}
+
+export interface WeatherSnapshot {
+  at: string;
+  city: string;
+  condition: string;
+  label: string;
+  /** Simulated demand multiplier applied by the engine. */
+  factor: number;
+  severity: number;
+  temperatureC: number | null;
+  rainfallMm: number;
+  source: 'simulated';
+}
+
+export interface PredictionPipelineStage {
+  key: string;
+  title: string;
+  summary: string;
+  detail: string;
+  /** Where the stage lives in the codebase. */
+  code: string;
+}
+
+export interface OccupancyPredictionResult {
+  route: {
+    id: string;
+    code: string;
+    name: string;
+    mode: TransitMode;
+    capacity: number;
+    headwayMinutes: number;
+  };
+  stop: { id: string; code: string; name: string } | null;
+  targetAt: string;
+  timeZone: string;
+  dayType: DayType;
+  hourOfDay: number;
+
+  /** Stage 3 output. */
+  predictedOccupancyPercentage: number;
+  predictedRatio: number;
+  headcount: number;
+  capacity: number;
+  baselineOccupancyPercentage: number;
+  interval: { lowerPercentage: number; upperPercentage: number };
+
+  /** Stage 4 output. */
+  crowd: CrowdClass;
+
+  confidencePercentage: number;
+
+  factors: PredictionFactorReport[];
+  inputsUsed: {
+    historicalSamples: number;
+    historicalScope: 'stop' | 'line' | 'prior';
+    currentOccupancyPercentage: number | null;
+    currentOccupancyAgeMinutes: number | null;
+    upstreamOccupancyPercentage: number;
+    alertPressurePct: number;
+    weather: WeatherSnapshot | null;
+  };
+  engine: PredictionEngineDescriptor;
+  disclaimer: string;
+  generatedAt: string;
+}
+
+export interface PredictionEngineReport {
+  engine: PredictionEngineDescriptor;
+  /** The classification table, with an example value per band. */
+  classes: (CrowdClass & { examplePercentage: number; rule: string })[];
+  inputs: { key: string; label: string; source: string; detail: string }[];
+  stages: PredictionPipelineStage[];
+  weather: {
+    source: 'weather_conditions (simulated)' | 'disabled';
+    current: WeatherSnapshot | null;
+    slots: WeatherSnapshot[];
+  };
+  routeOptimization: {
+    consumer: string;
+    detail: string;
+    scoreFormula: string;
+  };
+  generatedAt: string;
 }

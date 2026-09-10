@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Brain,
   CalendarClock,
   Coins,
+  FlaskConical,
   Footprints,
   Leaf,
   MapPin,
@@ -252,12 +253,30 @@ export function RouteDetails() {
                 <Card>
                   <CardHeader
                     title="Why the model predicts this"
-                    subtitle={`${forecast.data.modelVersion} · driven by ${forecast.data.factors.length} live signals`}
+                    subtitle={
+                      forecast.data.engine
+                        ? `${forecast.data.engine.id} ${forecast.data.engine.version} · driven by ${forecast.data.factors.length} live signals`
+                        : `${forecast.data.modelVersion} · driven by ${forecast.data.factors.length} live signals`
+                    }
                     icon={<Brain className="size-4" />}
-                    actions={<ConfidencePill value={forecast.data.headline.confidence} />}
+                    actions={
+                      <div className="flex items-center gap-2">
+                        <NavLink to="/engine">
+                          <Badge tone="violet" size="xs" icon={<FlaskConical className="size-3" />}>
+                            Simulation Mode
+                          </Badge>
+                        </NavLink>
+                        <ConfidencePill value={forecast.data.headline.confidence} />
+                      </div>
+                    }
                   />
-                  <CardBody>
+                  <CardBody className="space-y-3">
                     <FactorBreakdown factors={forecast.data.factors} />
+                    <p className="border-t border-white/6 pt-3 text-[0.68rem] leading-relaxed text-mist-500">
+                      {forecast.data.engine
+                        ? `${forecast.data.engine.note} Weather input: ${forecast.data.engine.weatherSource}.`
+                        : 'Predictions are calculated from simulated historical and live transit data.'}
+                    </p>
                   </CardBody>
                 </Card>
               ) : null}

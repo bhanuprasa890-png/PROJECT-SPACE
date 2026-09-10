@@ -132,6 +132,69 @@ export function usePlan(params: {
   });
 }
 
+/* -------------------------------------------------------------------------- */
+/* Prediction layer (SIMULATED data) — Input Data → Engine → Occupancy → …    */
+/* -------------------------------------------------------------------------- */
+
+/** Engine descriptor, pipeline stages, input catalogue and crowd classes. */
+export function usePredictionEngine() {
+  return useQuery({
+    queryKey: queryKeys.predictionEngine,
+    queryFn: () => api.predictionEngine(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Routes the prediction API accepts, for the simulator picker. */
+export function usePredictionRoutes() {
+  return useQuery({
+    queryKey: queryKeys.predictionRoutes,
+    queryFn: () => api.predictionRoutes(),
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** One occupancy prediction for a route/stop/instant, with factor breakdown. */
+export function usePrediction(params: {
+  lineId?: string;
+  stopId?: string | null;
+  at?: string;
+  weather?: string;
+  capacity?: number;
+  enabled?: boolean;
+}) {
+  const key = {
+    lineId: params.lineId ?? '',
+    stopId: params.stopId ?? '',
+    at: params.at ?? 'now',
+    weather: params.weather ?? 'auto',
+    capacity: params.capacity ?? 0,
+  };
+
+  return useQuery({
+    queryKey: queryKeys.prediction(key),
+    queryFn: () =>
+      api.prediction({
+        lineId: params.lineId as string,
+        stopId: params.stopId,
+        at: params.at,
+        weather: params.weather,
+        capacity: params.capacity,
+      }),
+    enabled: (params.enabled ?? true) && Boolean(params.lineId),
+    staleTime: 15_000,
+  });
+}
+
+/** Simulated weather slots the engine can read (optional input). */
+export function usePredictionWeather() {
+  return useQuery({
+    queryKey: queryKeys.predictionWeather,
+    queryFn: () => api.predictionWeather(),
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useLine(lineId?: string) {
   return useQuery({
     queryKey: ['line', lineId ?? ''] as const,

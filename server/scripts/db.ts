@@ -38,6 +38,7 @@ const TABLES = [
   'route_searches',
   'route_search_options',
   'model_config',
+  'weather_conditions',
 ];
 
 /**
@@ -208,6 +209,38 @@ async function verify(db: Queryable): Promise<boolean> {
      group by r.route_number order by max(p.predicted_occupancy_percentage) desc limit 1`,
   );
   check('peak congestion is queryable', Boolean(peak), peak ? `${peak.route_number} at ${peak.peak}% (${peak.level})` : '');
+
+  // --- 5b. prediction layer inputs (SIMULATED weather table) ----------------
+  const weather = await db.one<{ count: string; conditions: string; current: string | null }>(
+    `select count(*)::text as count,
+            count(distinct condition)::text as conditions,
+            (select condition from weather_conditions where observed_at <= now()
+              order by observed_at desc limit 1) as current
+       from weather_conditions`,
+  );
+  const weatherRows = Number(weather?.count ?? 0);
+  check('weather_conditions seeded (prediction input)', weatherRows >= 24, `${weatherRows} slots, current ${weather?.current ?? 'n/a'}`);
+  check(
+    'weather covers several simulated conditions',
+    Number(weather?.conditions ?? 0) >= 3,
+    `${weather?.conditions ?? 0} distinct conditions`,
+  );
+
+  const weatherWindow = await db.one<{ future: string }>(
+    `select count(*)::text as future from weather_conditions where observed_at > now()`,
+  );
+  check(
+    'weather has a forecast window ahead',
+    Number(weatherWindow?.future ?? 0) >= 6,
+    `${weatherWindow?.future ?? 0} future slots`,
+  );
+
+  const weatherDupes = await db.one<{ count: string }>(
+    `select count(*)::text as count from (
+       select city, observed_at from weather_conditions group by city, observed_at having count(*) > 1
+     ) d`,
+  );
+  check('one weather slot per city per hour', Number(weatherDupes?.count ?? 0) === 0);
 
   // --- 6. published views expose the requested names ------------------------
   for (const view of ['v_stops', 'v_vehicles', 'v_alerts', 'v_users']) {

@@ -52,26 +52,28 @@ networkRouter.get('/stops/:stopId', async (req, res) => {
 
   res.json({
     stop,
-    departures: departures.map((departure) => {
-      const prediction = model.predict({
-        lineId: departure.lineId,
-        stopId: stop.id,
-        at: new Date(departure.departureAt),
-        capacity: departure.vehicleCapacity || 90,
-        mode: departure.mode,
-        headwayMinutes: departure.headwayMinutes,
-      });
-      return {
-        ...departure,
-        prediction: {
-          ratio: prediction.ratio,
-          level: prediction.level,
-          headcount: prediction.headcount,
+    departures: await Promise.all(
+      departures.map(async (departure) => {
+        const prediction = await model.predict({
+          lineId: departure.lineId,
+          stopId: stop.id,
+          at: new Date(departure.departureAt),
           capacity: departure.vehicleCapacity || 90,
-          confidence: prediction.confidence,
-        },
-      };
-    }),
+          mode: departure.mode,
+          headwayMinutes: departure.headwayMinutes,
+        });
+        return {
+          ...departure,
+          prediction: {
+            ratio: prediction.ratio,
+            level: prediction.level,
+            headcount: prediction.headcount,
+            capacity: departure.vehicleCapacity || 90,
+            confidence: prediction.confidence,
+          },
+        };
+      }),
+    ),
   });
 });
 

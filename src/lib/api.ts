@@ -11,13 +11,16 @@ import type {
   ForecastSeries,
   HealthReport,
   LineDetail,
+  OccupancyPredictionResult,
   OperatorOverview,
   PlannerResponse,
+  PredictionEngineReport,
   RiderProfile,
   SettingsOptions,
   StationBoard,
   Stop,
   TransitLine,
+  WeatherSnapshot,
   TransitMode,
   WatchlistItem,
 } from '@shared/types';
@@ -104,6 +107,39 @@ export interface HealthPayload extends HealthReport {
   dataClassification?: 'demo-simulated';
   dataset?: { name: string; requestedAs: string; rows: number }[];
 }
+
+
+export interface PredictionEnginePayload extends PredictionEngineReport {
+  simulated: true;
+  disclaimer: string;
+  weatherConditions: string[];
+}
+
+export interface PredictionResponse {
+  simulated: true;
+  disclaimer: string;
+  /** `auto` uses the simulated weather table, `none` disables the factor. */
+  weatherScenario: string;
+  prediction: OccupancyPredictionResult;
+}
+
+export interface PredictionSeriesResponse {
+  simulated: true;
+  disclaimer: string;
+  minutes: number;
+  stepMinutes: number;
+  points: OccupancyPredictionResult[];
+}
+
+export interface PredictionWeatherResponse {
+  simulated: true;
+  disclaimer: string;
+  source: string;
+  current: WeatherSnapshot | null;
+  slots: WeatherSnapshot[];
+  available: { condition: string; demandMultiplier: number | null }[];
+}
+
 
 export const api = {
   health: () => request<HealthPayload>('/health'),
@@ -228,7 +264,7 @@ export const api = {
       `/crowd/history${query({ lineId, stopId, hours })}`,
     ),
 
-  /* ----------------------------------------------------------------- alerts */
+/* ----------------------------------------------------------------- alerts */
 
   alerts: (params: { status?: AlertStatus | 'all'; severity?: string; lineId?: string; limit?: number } = {}) =>
     request<{
@@ -251,6 +287,61 @@ export const api = {
     request<Alert>(`/alerts/${alertId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   deleteAlert: (alertId: string) => request<void>(`/alerts/${alertId}`, { method: 'DELETE' }),
+
+  /* ------------------------------------------------------------- prediction */
+
+  predictionEngine: () => request<PredictionEnginePayload>('/prediction/engine'),
+
+  predictionRoutes: () =>
+    request<{
+      routes: {
+        id: string;
+        code: string;
+        name: string;
+        mode: TransitMode;
+        capacityPerVehicle: number;
+        headwayMinutes: number;
+        color: string;
+      }[];
+    }>('/prediction/routes'),
+
+  prediction: (params: {
+    lineId: string;
+    stopId?: string | null;
+    at?: string;
+    capacity?: number;
+    weather?: string;
+  }) =>
+    request<PredictionResponse>(
+      `/prediction${query({
+        lineId: params.lineId,
+        stopId: params.stopId,
+        at: params.at,
+        capacity: params.capacity,
+        weather: params.weather,
+      })}`,
+    ),
+
+  predictionSeries: (params: {
+    lineId: string;
+    stopId?: string | null;
+    at?: string;
+    minutes?: number;
+    stepMinutes?: number;
+    weather?: string;
+  }) =>
+    request<PredictionSeriesResponse>(
+      `/prediction/series${query({
+        lineId: params.lineId,
+        stopId: params.stopId,
+        at: params.at,
+        minutes: params.minutes,
+        stepMinutes: params.stepMinutes,
+        weather: params.weather,
+      })}`,
+    ),
+
+  predictionWeather: () => request<PredictionWeatherResponse>('/prediction/weather'),
 
   /* --------------------------------------------------------------- operator */
 

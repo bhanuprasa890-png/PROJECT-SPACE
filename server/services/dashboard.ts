@@ -178,7 +178,7 @@ async function snapshotForItem(
   const next = departures[0];
   if (!next) return undefined;
 
-  const prediction = model.predict({
+  const prediction = await await model.predict({
     lineId: next.lineId,
     stopId: item.originStopId,
     at: new Date(next.departureAt),
@@ -225,7 +225,7 @@ async function buildStationBoard(
     seen.add(key);
 
     const at = new Date(departure.departureAt);
-    const prediction = model.predict({
+    const prediction = await await model.predict({
       lineId: departure.lineId,
       stopId,
       at,

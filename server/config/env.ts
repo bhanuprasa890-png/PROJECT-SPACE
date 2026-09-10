@@ -31,6 +31,22 @@ export const env = {
 
   defaultProfileId: process.env.DEFAULT_PROFILE_ID ?? 'profile-ava',
 
+  /**
+   * Prediction layer configuration.
+   *
+   * The prototype ships a heuristic ensemble. Point `PREDICTION_MODEL_URL` at a
+   * real machine-learning service that implements the `OccupancyPredictor`
+   * contract (see `server/services/prediction/predictors/external-model.ts`) to
+   * replace it — the rest of the pipeline is unchanged.
+   */
+  prediction: {
+    modelUrl: process.env.PREDICTION_MODEL_URL?.trim() || null,
+    modelApiKey: process.env.PREDICTION_MODEL_API_KEY?.trim() || null,
+    modelTimeoutMs: Number(process.env.PREDICTION_MODEL_TIMEOUT_MS ?? 1200),
+    /** Simulated weather factor is used unless the weather table is empty. */
+    weatherEnabled: bool(process.env.PREDICTION_WEATHER, true),
+  },
+
   /** Bumped whenever the crowd model's assumptions change. */
   modelVersion: 'transitpulse-crowd-v3',
   appVersion: '0.1.0',

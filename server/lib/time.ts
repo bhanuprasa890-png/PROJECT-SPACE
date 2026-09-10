@@ -1,4 +1,6 @@
-export type DayType = 'weekday' | 'saturday' | 'sunday';
+import type { DayType } from '../../shared/types';
+
+export type { DayType };
 
 interface ZonedParts {
   year: number;

@@ -47,7 +47,7 @@ deterministic 14-day demo dataset.
 | `npm run dev:api` / `npm run dev:web` | Run either half on its own |
 | `npm run build` | Production frontend build |
 | `npm run typecheck` | `tsc --noEmit` across app, shared and server |
-| `npm run smoke` | Renders all seven routes in jsdom against a running API and asserts database-backed content |
+| `npm run smoke` | Renders all eight routes in jsdom against a running API and asserts database-backed content |
 | `npm run db:status` | Row counts for every table + current schema version |
 | **`npm run db:verify`** | **Executable checklist: columns, keys, indexes, constraints, seed minimums and cross-table joins** |
 | `npm run db:refresh` | Rebuild the canonical dataset from the live network model |
@@ -75,7 +75,9 @@ engine-agnostic, and the API reports which driver it is using at `GET /api/healt
 
 * The database connection string lives in the server-side environment only
   (`.env`, git-ignored). Only `DATABASE_URL`, `DB_SSL`, `PGLITE_DIR`,
-  `DB_AUTO_MIGRATE`, `DB_RESET`, `PORT` and `DEFAULT_PROFILE_ID` are read.
+  `DB_AUTO_MIGRATE`, `DB_RESET`, `PORT`, `DEFAULT_PROFILE_ID` and the
+  prediction-model settings (`PREDICTION_MODEL_URL`, `PREDICTION_MODEL_API_KEY`,
+  `PREDICTION_MODEL_TIMEOUT_MS`, `PREDICTION_WEATHER`) are read.
 * The frontend calls relative `/api/...` URLs; there is no `VITE_*` database
   variable, no Supabase key and no connection string in the bundle.
 * Row Level Security is enabled on every table: network/timetable/crowd data and
@@ -134,6 +136,7 @@ Data Explorer's **Rebuild dataset** button (`POST /api/dataset/refresh`).
 | `crowd_observations` | Raw occupancy telemetry (~9.7k rows, 14 days) |
 | `crowd_forecasts` | Model output persisted per line/stop/target time |
 | `alerts` | Operational notice board (10 notices) |
+| `weather_conditions` | Simulated hourly weather slots (72) — the **optional** weather input of the prediction engine |
 | `rider_profiles`, `watchlist` | Rider preferences, role and saved journeys |
 | `route_searches`, `route_search_options` | Every planner run — operator demand data is real |
 | `model_config` | Model metadata, planner weights and service targets (tunable without a deploy) |
@@ -160,7 +163,7 @@ npm run db:verify
 ```
 
 ```
-[db] verification — 48/48 checks passed
+[db] verification — 52/52 checks passed
   ✓ columns routes — 8 columns            ✓ foreign keys vehicle_snapshots — 2 fk
   ✓ primary key routes                    ✓ indexes occupancy_predictions — 6 index(es)
   ✓ routes ≥ 6 rows — 6 rows              ✓ all three roles present — admin, commuter, operator
@@ -168,6 +171,8 @@ npm run db:verify
   ✓ route score is travel + waiting + crowd penalty — 0 drift (max 0)
   ✓ shared bands: <60 low · 60-85 moderate · >85 high — 0.10=low 0.60=low 0.61=moderate …
   ✓ crowd penalty rises with occupancy — 30%→2.400 · 70%→8.800 · 100%→24.066 min
+  ✓ weather_conditions seeded (prediction input) — 72 slots, current clear
+  ✓ weather has a forecast window ahead — 65 future slots
   ✓ view v_stops — 32 rows …              ✓ tables marked as DEMO DATA — 7/7
 ```
 
@@ -183,7 +188,8 @@ npm run db:verify
 | **4. Operator dashboard** | `/operator` | How is the network performing? Fleet state, 24-hour load profiles, crowding hotspots, demand signals from real searches, service KPIs, system health. |
 | **5. Alerts** | `/alerts` | What has gone wrong and who knows? Filterable notices, severity mix, and a composer that publishes straight into the `alerts` table. |
 | **6. Settings** | `/settings` | How should TransitPulse plan for me? Crowd tolerance, walking, transfers, preferred modes, notification thresholds, saved journeys. |
-| **7. Data explorer** | `/database` | What does the database actually contain? Live row counts, columns, primary/foreign keys and paginated records for every canonical table, straight from Postgres. |
+| **7. Prediction engine** | `/engine` | How does the AI actually decide? The five-stage pipeline, the input catalogue, the crowd-classification table (48% → Low, 72% → Moderate, 91% → High) and a live simulator: pick a route, horizon and weather scenario and watch the predicted occupancy, crowd level, confidence and per-factor contribution recompute from the API. |
+| **8. Data explorer** | `/database` | What does the database actually contain? Live row counts, columns, primary/foreign keys and paginated records for every canonical table, straight from Postgres. |
 
 Every screen is responsive: three-column data layouts on desktop, stacked cards on
 tablet, and a bottom-tab navigation shell on mobile.
@@ -192,18 +198,37 @@ tablet, and a bottom-tab navigation shell on mobile.
 
 ## 4. How the prediction works
 
-`server/services/crowd-model.ts` blends four signals and returns both the number
-and the reason for it:
+The model is a **modular prediction layer** under `server/services/prediction/`.
+It runs the same five stages for every answer, in the order they are drawn on
+the `/engine` screen:
 
-1. **Learned baseline** — the 14-day hourly mean *and* 90th percentile for that
-   line/stop/day-type/hour cell, interpolated across the hour boundary.
-2. **Service pressure** — short headways bunch passengers onto fewer vehicles.
-3. **Live context** — active crowding alerts and upstream load carried down the line.
-4. **Confidence** — degrades with horizon and with thin history.
+```
+Input Data → Prediction Engine → Occupancy Prediction → Crowd Classification → Route Optimization
+```
 
-Every prediction reports its per-factor contribution in occupancy points, which is
-what the **Model breakdown** tab renders. Forecasts are written back into
-`crowd_forecasts`, so riders, operators and API consumers share one picture.
+| Stage | Module | What it does |
+| --- | --- | --- |
+| 1 · **Input Data** | `signals.ts` · `weather.ts` | Loads **historical occupancy** (14-day mean + p90 per line/stop/day-type/hour), **time of day**, **route** (mode, capacity, headway), **current occupancy** (latest live reading, recency-weighted), **day type** (weekday/Saturday/Sunday in the agency timezone) and the **optional weather factor** from the simulated `weather_conditions` table. |
+| 2 · **Prediction Engine** | `engine.ts` · `predictors/` | Any object implementing the `OccupancyPredictor` interface turns a `PredictionInput` into a `PredictionCore`. The shipped **heuristic ensemble** blends the signals; an **external model** can take over instead. |
+| 3 · **Occupancy Prediction** | `predict()` | Emits the predicted occupancy **percentage**, headcount vs capacity, an 80% interval, the baseline it started from, a **confidence percentage** and a per-factor contribution in percentage points. |
+| 4 · **Crowd Classification** | `classification.ts` | Turns the percentage into the rider-facing band (<60% **Low**, 60–85% **Moderate**, >85% **High**) — the same table `shared/crowd.ts` and `fn_crowd_level()` use. |
+| 5 · **Route Optimization** | `planner.ts` | Scores every itinerary as `travel time + waiting time + crowd penalty`, so the recommendation changes when the forecast does. |
+
+**Swapping in a real model.** Set `PREDICTION_MODEL_URL` (plus
+`PREDICTION_MODEL_API_KEY` / `PREDICTION_MODEL_TIMEOUT_MS` if needed) and stage 2
+posts the assembled `PredictionInput` to that endpoint, expecting the same
+`PredictionCore` shape. If the service is unreachable or slow, the engine falls
+back to the built-in ensemble and reports `fallbackNote` — nothing else in the
+pipeline, the API or the UI changes. `npm run db:verify` asserts the classifier
+matches Postgres, and `GET /api/prediction/engine` returns the whole contract.
+
+**Everything the engine consumes is simulated.** Occupancy telemetry, weather
+slots and the fleet snapshot are synthetic demo data generated by the seed
+scripts — never measurements of a real network — and every prediction response
+carries `simulated: true` plus a written disclaimer. The UI shows a
+**Simulation Mode** badge in the shell and on the `/engine` and `/routes/details`
+screens, so no judge has to guess. No production accuracy is claimed: `accuracy` in
+`model_config` is a calibration read on the demo history, not an SLA.
 
 ### The three crowd bands
 
@@ -269,6 +294,10 @@ real aggregates rather than illustrative numbers.
 | `GET\|POST` | `/api/plan` | Ranked crowd-aware itineraries, insights, recommended option |
 | `GET` | `/api/journey-context` | Line + stop + forecast + alerts for one leg |
 | `GET` | `/api/crowd/live`, `/api/crowd/forecast`, `/api/crowd/history` | Live readings, forecast series, trailing observations |
+| `GET` | `/api/prediction` | One occupancy prediction (`lineId`, `stopId`, `at`, `weather`) with crowd level, confidence, interval and factor contributions |
+| `GET` | `/api/prediction/series` | The same prediction stepped across a horizon (engine-driven curve) |
+| `GET` | `/api/prediction/engine` | Pipeline stages, input catalogue, crowd classes, engine descriptor, simulated weather |
+| `GET` | `/api/prediction/weather` | Simulated weather slots and the demand multiplier behind each condition |
 | `GET\|POST\|PATCH\|DELETE` | `/api/alerts` (`/:id`) | List, publish, resolve/reopen, retract |
 | `GET` | `/api/operator/overview\|fleet\|line-load\|demand\|config` | Control-room analytics |
 | `GET\|PATCH` | `/api/profile` | Rider preferences |
@@ -325,15 +354,20 @@ Errors always come back as `{ "error": { "message", "code", "details?" } }`.
    trend up / down the line, score), then the leg-by-leg boarding plan with
    estimated arrivals, the forecast chart (measured history → predicted band), the
    model breakdown that shows *why*, and the alternative routes below.
-5. **Operator** — fleet state, the 24-hour load profile with both peaks, hotspots,
+5. **Prediction engine** — click the **Simulation Mode** badge: the five-stage
+   pipeline, the crowd-classification table and the live simulator. Change the
+   horizon to *+1 hour* or set the weather to *heavy rain* and watch the
+   predicted occupancy, confidence and factor bars recompute — this is the screen
+   that answers *"is the AI real?"*.
+6. **Operator** — fleet state, the 24-hour load profile with both peaks, hotspots,
    and the demand panel proving riders are choosing quieter trips.
-6. **Alerts** — publish a crowding notice; it appears instantly for riders, and it
+7. **Alerts** — publish a crowding notice; it appears instantly for riders, and it
    lands in the `alerts` table (and in `service_alerts` after a dataset refresh).
-7. **Database** — open the Data Explorer: real row counts, primary/foreign keys and
+8. **Database** — open the Data Explorer: real row counts, primary/foreign keys and
    records for `routes`, `route_stops`, `vehicle_snapshots`,
    `occupancy_predictions`, `route_options`, `service_alerts` and `app_users` — then
    press **Rebuild dataset** and show the counts recomputed from the model.
-8. **Settings** — drag crowd tolerance down and re-plan: the planner penalises busy
+9. **Settings** — drag crowd tolerance down and re-plan: the planner penalises busy
    carriages harder.
 
 ---
@@ -348,8 +382,11 @@ these are intentionally left for the next iteration:
   existing `auth_user_id` column and RLS policies are the intended path.
 * **Live vehicle positions** — `vehicles.next_stop_id` and `vehicle_snapshots` are
   seeded; a GTFS-Realtime feed would replace the simulated fleet state.
-* **Model training** — the crowd model is a transparent statistical blend rather
-  than a trained network, which keeps the demo explainable and dependency-free.
+* **Model training** — the shipped predictor is a transparent statistical
+  ensemble rather than a trained network, which keeps the demo explainable and
+  dependency-free. The `OccupancyPredictor` seam and `PREDICTION_MODEL_URL`
+  adapter exist precisely so a trained model can replace it without touching the
+  API, the database or the UI.
 * **Push delivery** — notification preferences are stored and rendered; an actual
   push/email provider is out of scope.
 * **Offline caching / PWA** — data is refetched on an interval instead.

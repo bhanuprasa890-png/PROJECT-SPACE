@@ -371,7 +371,7 @@ async function evaluate(
       const at = addMinutes(boardAt, minutesIn);
       const upstreamRatio = boarding ? Math.min(0.95, boarding.ratio * 0.82) : 0;
 
-      const prediction = model.predict({
+      const prediction = await await model.predict({
         lineId: ride.lineId,
         stopId: entry.stopId,
         at,
@@ -403,7 +403,7 @@ async function evaluate(
 
     const boardingPrediction =
       boarding ??
-      model.predict({
+      await model.predict({
         lineId: ride.lineId,
         stopId: ride.fromStopId,
         at: boardAt,
@@ -816,7 +816,7 @@ export async function planJourney(
     const laterAt = new Date(nextDeparture.departureAt);
     const line = index.lineById.get(firstRide.lineId);
     if (line) {
-      const laterPrediction = model.predict({
+      const laterPrediction = await model.predict({
         lineId: line.id,
         stopId: firstRide.fromStopId,
         at: laterAt,

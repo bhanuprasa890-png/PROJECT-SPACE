@@ -109,6 +109,25 @@ const ROUTES = [
     ],
   },
   {
+    // Prediction engine — pipeline stages, crowd classes and a live prediction,
+    // all rendered from `/api/prediction/*` (nothing typed into the component).
+    path: '/engine',
+    name: 'Prediction engine',
+    expect: [
+      'Simulation Mode',
+      'Prediction Engine',
+      'Occupancy Prediction',
+      'Crowd Classification',
+      'Route Optimization',
+      'How a prediction is produced',
+      'Engine internals',
+      'Predicted occupancy',
+      'Factor contributions',
+      'Model inputs',
+      'heuristic-ensemble',
+    ],
+  },
+  {
     path: '/operator',
     name: 'Operator dashboard',
     expect: ['Line load profile', 'System health', 'Metro Line 1', 'MTC 21G'],

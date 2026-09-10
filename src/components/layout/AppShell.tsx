@@ -3,7 +3,9 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   Bell,
+  BrainCircuit,
   Database,
+  FlaskConical,
   Gauge,
   LayoutDashboard,
   Menu,
@@ -31,6 +33,7 @@ const PRIMARY_NAV: NavItem[] = [
   { to: '/routes', label: 'Plan', description: 'Route results', icon: Route },
   { to: '/operator', label: 'Operator', description: 'Control room', icon: Gauge },
   { to: '/alerts', label: 'Alerts', description: 'Service notices', icon: Bell },
+  { to: '/engine', label: 'AI engine', description: 'Prediction pipeline', icon: BrainCircuit },
   { to: '/settings', label: 'Settings', description: 'Preferences', icon: SettingsIcon },
   { to: '/database', label: 'Database', description: 'Data explorer', icon: Database },
 ];
@@ -59,6 +62,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/settings': {
     title: 'Settings',
     subtitle: 'Routing preferences, crowd tolerance and saved journeys',
+  },
+  '/engine': {
+    title: 'Prediction Engine',
+    subtitle: 'Input Data → Prediction Engine → Occupancy Prediction → Crowd Classification',
   },
   '/database': {
     title: 'Data Explorer',
@@ -182,11 +189,18 @@ export function AppShell() {
             <NavList />
           </div>
           <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <Badge tone="neutral" size="sm">
-                Demo · simulated data
-              </Badge>
-            </div>
+            <NavLink
+              to="/engine"
+              className="flex items-center gap-2 rounded-xl border border-violet-400/25 bg-violet-400/8 px-3 py-2.5 transition-colors hover:border-violet-400/40 hover:bg-violet-400/12"
+            >
+              <FlaskConical className="size-4 shrink-0 text-violet-300" />
+              <span className="min-w-0">
+                <span className="block text-xs font-medium text-mist-100">Simulation Mode</span>
+                <span className="block text-[0.65rem] text-mist-500">
+                  Predictions use simulated data
+                </span>
+              </span>
+            </NavLink>
             <DatabaseBadge />
             <p className="px-1 text-[0.62rem] leading-relaxed text-mist-600">
               Predict → Avoid → Optimize. Crowd forecasts are generated from{' '}
@@ -247,6 +261,11 @@ export function AppShell() {
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
+                <NavLink to="/engine" className="hidden md:inline-flex" title="All predictions use simulated demo data">
+                  <Badge tone="violet" icon={<FlaskConical className="size-3" />}>
+                    Simulation Mode
+                  </Badge>
+                </NavLink>
                 <LivePill className="hidden sm:inline-flex" label="Live" />
                 <Button
                   variant="primary"
